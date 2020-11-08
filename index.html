@@ -4,72 +4,56 @@
     <script src="bootstrap.min.js"></script>
     <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
   </head>
-  <div class="container"></div>
-  <div class="row">
-    <div class="col-sm-6">
-      <body>
-        <div id="viz"></div>
-        <!--<h1> Hello Worlds</h1> -->
-        <script type="text/javascript">
-          var dataset = [],
-            i = 0;
+  <div class="container">
+    <div class="row">
+      <div class="col-sm-6">
+        <body>
+          <div id="viz">
+            <!--<h1> Hello Worlds</h1> -->
+            <script type="text/javascript">
+              <g class="match">
+                <svg width="400" height="200">
+                  <rect x="0" y="0" width="400" height="200" fill="green" />
 
-          for (i = 0; i < 5; i++) {
-            dataset.push(Math.round(Math.random() * 100));
-          }
-          var sampleSVG = d3
-            .select("#viz")
-            .append("svg")
-            .attr("width", 500)
-            .attr("height", 300);
+                  <circle cy="100" cx="80" r="60" fill="blue"></circle>
 
-          sampleSVG
-            .selectAll("circle")
-            .data(dataset)
-            .enter()
-            .append("circle")
-            .style("stroke", "gray")
-            .style("fill", "white")
-            .attr("r", 40)
-            .attr("cx", function (d, i) {
-              return 50 + i * 80;
-            })
-            .attr("cy", 120);
-        </script>
-      </body>
-    </div>
-    <div class="col-sm-6">
-      <body>
-        <div id="viz"></div>
-        <!--<h1> Hello Worlds</h1> -->
-        <script type="text/javascript">
-          var dataset = [],
-            i = 0;
+                  <circle
+                    cy="100"
+                    cx="320"
+                    r="60"
+                    fill="red"
+                    z-index="-1"
+                  ></circle>
+                </svg>
+              </g>;
+              // var dataset = [],
+              //   i = 0;
 
-          for (i = 0; i < 5; i++) {
-            dataset.push(Math.round(Math.random() * 100));
-          }
+              // for (i = 0; i < 5; i++) {
+              //   dataset.push(Math.round(Math.random() * 100));
+              // }
+              // var sampleSVG = d3
+              //   .select("#viz")
+              //   .append("svg")
+              //   .attr("width", 500)
+              //   .attr("height", 300);
 
-          var sampleSVG = d3
-            .select("#viz")
-            .append("svg")
-            .attr("width", 500)
-            .attr("height", 300);
-
-          sampleSVG
-            .selectAll("circle")
-            .data(dataset)
-            .enter()
-            .append("circle")
-            .style("stroke", "gray")
-            .style("fill", "white")
-            .attr("r", 40)
-            .attr("cx", function (d, i) {
-              return 50 + i * 80;
-            })
-            .attr("cy", 120);
-        </script>
-      </body>
+              // sampleSVG
+              //   .selectAll("circle")
+              //   .data(dataset)
+              //   .enter()
+              //   .append("circle")
+              //   .style("stroke", "gray")
+              //   .style("fill", "white")
+              //   .attr("r", 40)
+              //   .attr("cx", function (d, i) {
+              //     return 50 + i * 80;
+              //   })
+              //   .attr("cy", 120);
+            </script>
+          </div>
+        </body>
+      </div>
     </div>
   </div>
 </html>
