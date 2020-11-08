@@ -16,25 +16,35 @@
   <div class="container-fluid p-0">
     <div class="row">
       <div class="col-sm-2">
-        <!-- <g class="match">
-          <svg width="400" height="200">
-            <rect x="0" y="0" width="400" height="200" fill="green" />
-
-            <circle cy="100" cx="80" r="60" fill="blue"></circle>
-
-            <circle cy="100" cx="320" r="60" fill="red" z-index="-1"></circle>
-          </svg>
-        </g> -->
         <body>
           <p id="output"></p>
           <div id="viz">
-            <script type="text/javascript">
-              window.onload = function () {
-                var windownHeight = window.innerHeight;
-                var windowWidth = window.innerWidth;
+            <script>
+              let matchesJson;
+              let teamCsv;
 
-                document.getElementById("output").innerHTML = windownHeight;
-              };
+              //reading the data
+
+              var PromiseWrapper = (xhr, d) =>
+                new Promise((resolve) => xhr(d, (p) => resolve(p)));
+
+              Promise.all([
+                PromiseWrapper(d3.json, "match.json"),
+                PromiseWrapper(d3.csv, "team.csv"),
+              ]).then((resolve) => {
+                matchesJson = resolve[0].results;
+                teamCsv = resolve[1];
+                matchesJson.forEach(function (data) {
+                  teamCsv.forEach(function (team_data) {
+                    if (team_data.team_api_id == data.away_team_api_id) {
+                      console.log(team_data.team_long_name);
+                    } else if (team_data.team_api_id == data.home_team_api_id) {
+                      console.log(team_data.team_long_name);
+                    }
+                  });
+                  throw new Error();
+                });
+              });
             </script>
           </div>
         </body>
@@ -43,3 +53,21 @@
     </div>
   </div>
 </html>
+
+<!-- <g class="match">
+          <svg width="400" height="200">
+            <rect x="0" y="0" width="400" height="200" fill="green" />
+
+            <circle cy="100" cx="80" r="60" fill="blue"></circle>
+
+            <circle cy="100" cx="320" r="60" fill="red" z-index="-1"></circle>
+          </svg>
+        </g> -->
+
+<!-- 
+        window.onload = function () {
+          var windownHeight = window.innerHeight;
+          var windowWidth = window.innerWidth;
+
+          document.getElementById("output").innerHTML = windownHeight;
+        }; -->
