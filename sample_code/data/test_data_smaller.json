@@ -1,0 +1,9 @@
+{
+    "nodes": [
+      {"x": 469, "y": 410, "img":"team_logos/Aston Villa.png"},
+      {"x": 493, "y": 364, "img":"team_logos/Arsenal.png"}
+    ],
+    "links": [
+      {"source":  0, "target":  1}
+    ]
+  }

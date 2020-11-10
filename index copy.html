@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- Latest compiled CSS v3.4.1 -->
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
+    />
+    <!-- jQuery library v3.5.1-->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <!-- Latest compiled JavaScript v3.4.1 -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <!-- Latest compiled d3 v3 -->
+    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+  </head>
+  <div class="container-fluid p-0">
+    <div class="row">
+      <div class="col-sm-12">
+        <body>
+          <!-- <p id="output"></p> -->
+          <div id="viz">
+            <script>
+              let matchesJson;
+              let teamCsv;
+              //let tempTeam1
+
+              // "team_logos/astonvilla.png"
+              // "team_logos/arsenal.png"
+
+              //reading the data
+
+              var PromiseWrapper = (xhr, d) =>
+                new Promise((resolve) => xhr(d, (p) => resolve(p)));
+
+              Promise.all([
+                PromiseWrapper(d3.json, "match.json"),
+                PromiseWrapper(d3.csv, "team.csv"),
+              ]).then((resolve) => {
+                matchesJson = resolve[0].results;
+                teamCsv = resolve[1];
+                matchesJson.forEach(function (data) {
+                  teamCsv.forEach(function (team_data) {
+                    if (team_data.team_api_id == data.away_team_api_id) {
+                      console.log(team_data.team_long_name);
+                    } else if (team_data.team_api_id == data.home_team_api_id) {
+                      console.log(team_data.team_long_name);
+                    }
+                  });
+                  //call next function here
+                  throw new Error();
+                });
+              });
+
+              function loadNodeGraph(data) {
+                //start code here
+
+                var windownHeight = window.innerHeight; //note will need to change this to bootstrap size when we put side panel
+                var windowWidth = window.innerWidth;
+
+                var vis;
+                var force = d3.layout.force();
+
+                vis = d3
+                  .select("#viz")
+                  .append("svg")
+                  .attr("width", windownHeight)
+                  .attr("height", windowWidth);
+              }
+            </script>
+            <!-- #viz closes on div below -->
+          </div>
+        </body>
+      </div>
+      <div class="col-sm-10"><h1>"hi there"</h1></div>
+    </div>
+  </div>
+</html>
+
+<!-- <g class="match">
+          <svg width="400" height="200">
+            <rect x="0" y="0" width="400" height="200" fill="green" />
+
+            <circle cy="100" cx="80" r="60" fill="blue"></circle>
+
+            <circle cy="100" cx="320" r="60" fill="red" z-index="-1"></circle>
+          </svg>
+        </g> -->
+
+<!-- 
+        window.onload = function () {
+          var windownHeight = window.innerHeight;
+          var windowWidth = window.innerWidth;
+
+          document.getElementById("output").innerHTML = windownHeight;
+        }; -->
