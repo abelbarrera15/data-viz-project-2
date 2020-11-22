@@ -22,10 +22,7 @@
             <script>
               let matchesJson;
               let teamCsv;
-              //let tempTeam1
-
-              // "team_logos/astonvilla.png"
-              // "team_logos/arsenal.png"
+              var matchesArray = [];
 
               //reading the data
 
@@ -40,11 +37,15 @@
                 teamCsv = resolve[1];
                 matchesJson.forEach(function (data) {
                   teamCsv.forEach(function (team_data) {
-                    if (team_data.team_api_id == data.away_team_api_id) {
-                      console.log(team_data.team_long_name);
-                    } else if (team_data.team_api_id == data.home_team_api_id) {
-                      console.log(team_data.team_long_name);
+                    var temp_arr = []; // might need to change this need later
+                    if (team_data.team_api_id === data.home_team_api_id) {
+                      temp_arr.push(team_data.team_long_name);
+                    } else if (
+                      team_data.team_api_id === data.away_team_api_id
+                    ) {
+                      team_arr.push(team_data.team_long_name);
                     }
+                    matchesArray.push(team_arr);
                   });
                   //call next function here
                   throw new Error();
