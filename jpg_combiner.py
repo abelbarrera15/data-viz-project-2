@@ -46,4 +46,4 @@ for iter in df_unique_names_combos[['home_team_name', 'away_team_name']].values.
         new_im.paste(im, (x_offset, 0))
         x_offset += im.size[0]
 
-    new_im.save(str(iter[0])+str(iter[1])+'.png')
+    new_im.save('./match_banners/'+str(iter[0])+str(iter[1])+'.png')
