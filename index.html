@@ -58,12 +58,7 @@
       var link = svg.selectAll(".link"),
         node = svg.selectAll(".node");
 
-      d3.json("sample_code/data/test_data_smaller.json", function (
-        error,
-        graph
-      ) {
-        if (error) throw error;
-
+      d3.json("sample_code/data/test_data_smaller.json", function (graph) {
         force.nodes(graph.nodes).links(graph.links).start();
 
         link = link
