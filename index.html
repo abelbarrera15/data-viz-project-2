@@ -2,7 +2,7 @@
 <html lang="en">
   <meta charset="utf-8" />
   <style>
-    .link {
+    /* .link {
       stroke: #000;
       stroke-width: 1.5px;
     }
@@ -16,6 +16,17 @@
 
     .node.fixed {
       fill: #f00;
+    } */
+    .link {
+      /* stroke: #aaa; */
+      stroke: #ccc;
+    }
+
+    .node {
+      pointer-events: all;
+      stroke: none;
+      stroke-width: 40px;
+      font: 10px sans-serif;
     }
   </style>
   <head>
@@ -32,148 +43,172 @@
     <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
   </head>
   <body>
-    <div id="viz">
+    <div>
+      <select id="selectNumber">
+        <option>Choose a number</option>
+      </select>
+    </div>
+    <div>
+      <!-- <svg width="2000" height="1200"></svg> -->
       <script>
-        // var width = 960,
-        //   height = 800;
+        let data_filter = undefined;
+        function makeNodegraph() {
+          var width = 960,
+            height = 500;
 
-        var width = window.screen.width,
-          height = window.screen.height;
+          var svg = d3
+            .select("body")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height);
 
-        var radius = 40;
+          var json = getData(data_filter); //undef for now will need to update
 
-        var color = d3.scale.category20();
-
-        var force = d3.layout
-          .force()
-          .size([width, height])
-          .charge(-400)
-          .linkDistance(100)
-          .on("tick", tick);
-
-        var drag = force.drag().on("dragstart", dragstart);
-
-        var svg = d3
-          .select("body")
-          .append("svg")
-          .attr("width", width)
-          .attr("height", height);
-
-        var link = svg.selectAll(".link"),
-          node = svg.selectAll(".node");
-
-        d3.json("sample_code/data/test_data_smaller.json", function (graph) {
-          force.nodes(graph.nodes).links(graph.links).start();
-
-          var defs = svg.append("svg:defs");
-
-          defs
-            //.selectAll(".pattern")
-            //.data(graph.nodes)
-            //.enter()
-            //.append("pattern")
-            .append("svg:pattern")
-            //.attr("id", function(d) { return d.name; })
-            // .attr("width", radius * 2)
-            // .attr("height", radius * 2)
-            .attr("id", "myImage")
-            .attr("width", 90)
-            .attr("height", 60)
-            .attr("class", "pattern")
-            .append("image")
-            .attr("xlink:href", function (d) {
-              //console.log("match_banners/AC BellinzonaBSC Young Boys.png");
-              return "match_banners/Rayo VallecanoVillarreal CF.png";
-            });
-          // .attr("width", radius * 2)
-          // .attr("height", radius * 2)
-          // .attr("x", 0)
-          // .attr("y", 0);
+          var force = d3.layout
+            .force()
+            .gravity(0.05)
+            .distance(100)
+            .charge(-100)
+            .size([width, height])
+            .nodes(json.nodes)
+            .links(json.links)
+            .start();
 
           var link = svg
             .selectAll(".link")
-            .data(graph.links)
+            .data(json.links)
             .enter()
             .append("line")
             .attr("class", "link");
 
-          // link = link
-          //   .data(graph.links)
-          //   .enter()
-          //   .append("line")
-          //   .attr("class", "link");
-
           var node = svg
             .selectAll(".node")
-            .data(graph.nodes)
+            .data(json.nodes)
             .enter()
-            .append("rect")
+            .append("g")
             .attr("class", "node")
-            .attr("width", 90)
-            .attr("height", 60)
-            .attr("fill", "url(#myImage)")
-            // .style("fill", function (d) {
-            //   return "blue";
-            // })
-            .on("dblclick", dblclick)
-            .call(drag);
+            .call(force.drag);
 
-          // node = node
-          //   .data(graph.nodes)
-          //   .enter()
-          //   .append("rect")
-          //   .attr("class", "node")
-          //   .attr("width", 90)
-          //   .attr("height", 60)
-          //   .on("dblclick", dblclick)
-          //   .call(drag);
-
-          // node
-          //   .append("g")
-          //   .data(graph.nodes)
-          //   .enter()
-          //   .append("svg:image")
-          //   .attr("x", "0")
-          //   .attr("y", "0")
-          //   .attr("height", "50px")
-          //   .attr("width", "60px")
-          //   .attr("xlink:href", function (d) {
-          //     console.log("im here");
-          //     return d.img;
-          //   });
-        });
-
-        function tick() {
-          link
-            .attr("x1", function (d) {
-              return d.source.x + 25;
-            })
-            .attr("y1", function (d) {
-              return d.source.y + 25;
-            })
-            .attr("x2", function (d) {
-              return d.target.x + 25;
-            })
-            .attr("y2", function (d) {
-              return d.target.y + 25;
-            });
+          let indexer = 0;
 
           node
-            .attr("x", function (d) {
-              return d.x;
+            .append("image")
+            .attr("xlink:href", function (d) {
+              if (indexer == 0) {
+                var imagePath = "match_banners/Rayo VallecanoVillarreal CF.png";
+                indexer = indexer + 1;
+              } else if (indexer == 1) {
+                var imagePath = "match_banners/Atletico MadridGranada CF.png";
+                indexer = indexer + 1;
+              } else {
+                var imagePath = "match_banners/FC St. GallenBSC Young Boys.png";
+              }
+              return imagePath;
             })
-            .attr("y", function (d) {
-              return d.y;
+            .attr("x", -8)
+            .attr("y", -8)
+            .attr("width", 16)
+            .attr("height", 16);
+
+          node
+            .append("text")
+            .attr("dx", 12)
+            .attr("dy", ".35em")
+            .text(function (d) {
+              return d.name;
             });
+
+          force.on("tick", function () {
+            link
+              .attr("x1", function (d) {
+                return d.source.x;
+              })
+              .attr("y1", function (d) {
+                return d.source.y;
+              })
+              .attr("x2", function (d) {
+                return d.target.x;
+              })
+              .attr("y2", function (d) {
+                return d.target.y;
+              });
+
+            node.attr("transform", function (d) {
+              return "translate(" + d.x + "," + d.y + ")";
+            });
+          });
         }
 
-        function dblclick(d) {
-          d3.select(this).classed("fixed", (d.fixed = false));
-        }
+        let matchesJson;
+        let teamCsv;
+        let matchesArray = [];
 
-        function dragstart(d) {
-          d3.select(this).classed("fixed", (d.fixed = true));
+        function getData(league_id) {
+          //reading the data
+
+          var PromiseWrapper = (xhr, d) =>
+            new Promise((resolve) => xhr(d, (p) => resolve(p)));
+
+          Promise.all([
+            PromiseWrapper(d3.json, "data/match.json"),
+            PromiseWrapper(d3.csv, "data/team.csv"),
+          ]).then((resolve) => {
+            matchesJson = resolve[0].results;
+            teamCsv = resolve[1];
+            matchesJson.forEach(function (data) {
+              let home_t;
+              let away_t;
+              teamCsv.forEach(function (team_data) {
+                let temp_arr = []; // might need to change this need later
+                if (team_data.team_api_id == data.home_team_api_id) {
+                  home_t = team_data.team_long_name;
+                } else if (team_data.team_api_id == data.away_team_api_id) {
+                  away_t = team_data.team_long_name;
+                }
+              });
+              matchesArray.push([home_t, away_t, home_t + away_t]);
+              //call next function here
+              //throw new Error();
+              //the above was to force an error and only have to do this one at a time
+            });
+          });
+
+          console.log(matchesArray);
+
+          return {
+            nodes: [
+              {
+                name: "Match1",
+              },
+              {
+                name: "Match2",
+              },
+              {
+                name: "Match3",
+              },
+            ],
+            links: [
+              {
+                source: 1,
+                target: 0,
+              },
+              {
+                source: 2,
+                target: 0,
+              },
+            ],
+          };
         }
+        var select = document.getElementById("selectNumber");
+        var options = ["1", "2", "3", "4", "5"];
+        for (var i = 0; i < options.length; i++) {
+          var opt = options[i];
+          var el = document.createElement("option");
+          el.textContent = opt;
+          el.value = opt;
+          select.appendChild(el);
+        }
+        makeNodegraph();
       </script>
     </div>
   </body>

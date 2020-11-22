@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+  <meta charset="utf-8" />
+  <style>
+    /* .link {
+      stroke: #000;
+      stroke-width: 1.5px;
+    }
+
+    .node {
+      cursor: move;
+      fill: #ccc;
+      stroke: #000;
+      stroke-width: 1.5px;
+    }
+
+    .node.fixed {
+      fill: #f00;
+    } */
+    .link {
+      stroke: #aaa;
+    }
+
+    .node {
+      pointer-events: all;
+      stroke: none;
+      stroke-width: 40px;
+    }
+  </style>
+  <head>
+    <!-- Latest compiled CSS v3.4.1 -->
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
+    />
+    <!-- jQuery library v3.5.1-->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <!-- Latest compiled JavaScript v3.4.1 -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <!-- Latest compiled d3 v3 -->
+    <script src="http://d3js.org/d3.v4.min.js" charset="utf-8"></script>
+  </head>
+  <body>
+    <svg width="2000" height="1200"></svg>
+    <script>
+      var nodes = [
+        {
+          id: 1,
+        },
+        {
+          id: 2,
+        },
+        {
+          id: 3,
+        },
+        {
+          id: 4,
+        },
+        {
+          id: 5,
+        },
+        {
+          id: 6,
+        },
+        {
+          id: 7,
+        },
+        {
+          id: 8,
+        },
+      ];
+
+      var links = [
+        {
+          source: 1,
+          target: 2,
+        },
+        {
+          source: 1,
+          target: 3,
+        },
+        {
+          source: 1,
+          target: 4,
+        },
+        {
+          source: 2,
+          target: 5,
+        },
+        {
+          source: 2,
+          target: 6,
+        },
+        {
+          source: 1,
+          target: 7,
+        },
+        {
+          source: 7,
+          target: 8,
+        },
+      ];
+
+      var svg = d3.select("svg"),
+        width = +svg.attr("width"),
+        height = +svg.attr("height"),
+        node,
+        link;
+
+      var defs = svg.append("svg:defs");
+
+      defs
+        .append("svg:pattern")
+        .attr("id", "myPattern")
+        .attr("width", 1)
+        .attr("height", 1)
+        .append("svg:image")
+        .attr("xlink:href", "match_banners/Rayo VallecanoVillarreal CF.png")
+        .attr("width", 80)
+        .attr("height", 50)
+        .attr("x", 0)
+        .attr("y", 0);
+
+      var simulation = d3
+        .forceSimulation()
+        .force(
+          "link",
+          d3
+            .forceLink()
+            .id(function (d) {
+              //console.log(d);
+              return d.id;
+            })
+            .distance(100)
+        )
+        .force("collide", d3.forceCollide(50))
+        .force("charge", d3.forceManyBody())
+        .force("center", d3.forceCenter(width / 2, height / 2));
+
+      link = svg.selectAll(".link").data(links, function (d) {
+        //console.log(d.target);
+        return d.target;
+      });
+
+      link = link.enter().append("line").attr("class", "link");
+
+      node = svg.selectAll(".node").data(nodes, function (d) {
+        return d.id;
+      });
+      // .append("svg:pattern")
+      // //.attr("id", "myPattern")
+      // .attr("width", 1)
+      // .attr("height", 1)
+      // .append("svg:image")
+      // .attr("xlink:href", "match_banners/Rayo VallecanoVillarreal CF.png")
+      // .attr("width", 80)
+      // .attr("height", 50)
+      // .attr("x", 0)
+      // .attr("y", 0);
+
+      node = node
+        .enter()
+        .append("g")
+        .attr("class", "node")
+        .call(
+          d3
+            .drag()
+            .on("start", dragstarted)
+            .on("drag", dragged)
+            .on("end", dragended)
+        );
+
+      node
+        .append("rect")
+        .attr("class", "node")
+        .attr("width", 90)
+        .attr("height", 60)
+        .style("fill", "url(#myPattern)");
+
+      simulation.nodes(nodes).on("tick", ticked);
+
+      simulation.force("link").links(links);
+
+      function ticked() {
+        link
+          .attr("x1", function (d) {
+            return d.source.x + 42;
+          })
+          .attr("y1", function (d) {
+            return d.source.y + 25;
+          })
+          .attr("x2", function (d) {
+            return d.target.x + 42;
+          })
+          .attr("y2", function (d) {
+            return d.target.y + 25;
+          });
+
+        node.attr("transform", function (d) {
+          return "translate(" + d.x + ", " + d.y + ")";
+        });
+      }
+
+      function dragstarted(d) {
+        if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+      }
+
+      function dragged(d) {
+        d.fx = d3.event.x;
+        d.fy = d3.event.y;
+      }
+
+      function dragended(d) {
+        if (!d3.event.active) simulation.alphaTarget(0);
+        d.fx = undefined;
+        d.fy = undefined;
+      }
+    </script>
+  </body>
+</html>
