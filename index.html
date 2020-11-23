@@ -2,24 +2,10 @@
 <html lang="en">
   <meta charset="utf-8" />
   <style>
-    /* .link {
-      stroke: #000;
-      stroke-width: 1.5px;
-    }
-
-    .node {
-      cursor: move;
-      fill: #ccc;
-      stroke: #000;
-      stroke-width: 1.5px;
-    }
-
-    .node.fixed {
-      fill: #f00;
-    } */
     .link {
       /* stroke: #aaa; */
       stroke: #ccc;
+      /* stroke-width: 1.5px; */
     }
 
     .node {
@@ -45,7 +31,7 @@
   <body>
     <div>
       <select id="selectNumber">
-        <option>Choose a number</option>
+        <option>Select a League</option>
       </select>
     </div>
     <div>
@@ -142,8 +128,10 @@
         let matchesJson;
         let teamCsv;
         let matchesArray = [];
+        let leaguesCsv;
 
         function getData(league_id) {
+          let league_array = [];
           //reading the data
 
           var PromiseWrapper = (xhr, d) =>
@@ -152,9 +140,11 @@
           Promise.all([
             PromiseWrapper(d3.json, "data/match.json"),
             PromiseWrapper(d3.csv, "data/team.csv"),
+            PromiseWrapper(d3.csv, "data/league.csv"),
           ]).then((resolve) => {
             matchesJson = resolve[0].results;
             teamCsv = resolve[1];
+            leaguesCsv = resolve[2];
             matchesJson.forEach(function (data) {
               let home_t;
               let away_t;
@@ -171,9 +161,21 @@
               //throw new Error();
               //the above was to force an error and only have to do this one at a time
             });
-          });
+            leaguesCsv.forEach(function (data) {
+              league_array.push(data.name);
+            });
 
-          console.log(matchesArray);
+            var select = document.getElementById("selectNumber");
+            var options = league_array;
+            //var options = ["1", "2", "3", "4", "5"];
+            for (var i = 0; i < options.length; i++) {
+              var opt = options[i];
+              var el = document.createElement("option");
+              el.textContent = opt;
+              el.value = opt;
+              select.appendChild(el);
+            }
+          });
 
           return {
             nodes: [
@@ -198,15 +200,6 @@
               },
             ],
           };
-        }
-        var select = document.getElementById("selectNumber");
-        var options = ["1", "2", "3", "4", "5"];
-        for (var i = 0; i < options.length; i++) {
-          var opt = options[i];
-          var el = document.createElement("option");
-          el.textContent = opt;
-          el.value = opt;
-          select.appendChild(el);
         }
         makeNodegraph();
       </script>
