@@ -80,30 +80,23 @@
               let home_t;
               let away_t;
               teamCsv.forEach(function (team_data) {
-                let temp_arr = []; // might need to change this need later
                 if (team_data.team_api_id == data.home_team_api_id) {
                   home_t = team_data.team_long_name;
                 } else if (team_data.team_api_id == data.away_team_api_id) {
                   away_t = team_data.team_long_name;
                 }
               });
-              // matchesArray.push([home_t, away_t, home_t + away_t]);
               let temp_data = data;
               temp_data["home_team_name"] = home_t;
               temp_data["away_team_name"] = away_t;
               temp_data["match_name"] = home_t + away_t;
               matchesJson_new.push(temp_data);
-              //call next function here
-              //throw new Error();
-              //the above was to force an error and only have to do this one at a time
             });
             leaguesCsv.forEach(function (data) {
               league_array.push(data.name);
             });
 
             matchesJson = matchesJson_new;
-            // console.log(matchesJson);
-
             makeForm();
           });
         }
@@ -224,6 +217,7 @@
                 }
               }
             }
+            makeNodegraph(temp_obj);
           }
           // return {
           //   nodes: [
@@ -250,7 +244,7 @@
           // };
         }
 
-        function makeNodegraph() {
+        function makeNodegraph(node_data) {
           var width = 960,
             height = 500;
 
@@ -260,7 +254,7 @@
             .attr("width", width)
             .attr("height", height);
 
-          var json = getNodeData(); //undef for now will need to update
+          var json = node_data;
 
           var force = d3.layout
             .force()
@@ -292,16 +286,17 @@
           node
             .append("image")
             .attr("xlink:href", function (d) {
-              if (indexer == 0) {
-                var imagePath = "match_banners/Rayo VallecanoVillarreal CF.png";
-                indexer = indexer + 1;
-              } else if (indexer == 1) {
-                var imagePath = "match_banners/Atletico MadridGranada CF.png";
-                indexer = indexer + 1;
-              } else {
-                var imagePath = "match_banners/FC St. GallenBSC Young Boys.png";
-              }
-              return imagePath;
+              // console.log(d);
+              // if (indexer == 0) {
+              //   var imagePath = "match_banners/Rayo VallecanoVillarreal CF.png";
+              //   indexer = indexer + 1;
+              // } else if (indexer == 1) {
+              //   var imagePath = "match_banners/Atletico MadridGranada CF.png";
+              //   indexer = indexer + 1;
+              // } else {
+              //   var imagePath = "match_banners/FC St. GallenBSC Young Boys.png";
+              // }
+              return "match_banners/" + d.name + ".png";
             })
             .attr("x", -8)
             .attr("y", -8)

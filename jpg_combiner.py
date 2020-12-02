@@ -3,7 +3,7 @@ import pandas as pd
 from PIL import Image
 
 with open("./data/match.json") as f:
-    df_unique_match_ups = pd.json_normalize(json.load(f)['results'])[
+    df_unique_match_ups = pd.json_normalize(json.load(f))[
         ['home_team_api_id', 'away_team_api_id']].drop_duplicates()
 
 team_names = pd.read_csv(
