@@ -1,6 +1,9 @@
 import json
 import pandas as pd
 from PIL import Image
+import os
+
+base_image = Image.open("./team_logos/Rayo Vallecano.png")
 
 with open("./data/match.json") as f:
     df_unique_match_ups = pd.json_normalize(json.load(f))[
@@ -34,7 +37,7 @@ for iter in df_unique_names_combos[['home_team_name', 'away_team_name']].values.
 
     images = [Image.open(x) for x in ['./team_logos/' +
                                       iter[0]+'.png', './team_logos/'+iter[1]+'.png']]
-    widths, heights = zip(*(i.size for i in images))
+    widths, heights = zip(*(base_image.size for i in images))
 
     total_width = sum(widths)
     max_height = max(heights)
@@ -42,8 +45,11 @@ for iter in df_unique_names_combos[['home_team_name', 'away_team_name']].values.
     new_im = Image.new('RGBA', (total_width, max_height))
 
     x_offset = 0
+    os.remove('./match_banners/'+str(iter[0])+str(iter[1])+'.png')
     for im in images:
+        im = im.resize(base_image.size)
         new_im.paste(im, (x_offset, 0))
         x_offset += im.size[0]
 
     new_im.save('./match_banners/'+str(iter[0])+str(iter[1])+'.png')
+    break
