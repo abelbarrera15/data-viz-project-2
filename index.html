@@ -26,19 +26,166 @@
     <!-- Latest compiled JavaScript v3.4.1 -->
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
     <!-- Latest compiled d3 v3 -->
-    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
   </head>
   <body>
-    <div>
-      <label for="selectNumber">Select a League</label>
-
-      <select id="selectNumber" name="Select a League">
-        <option></option>
-      </select>
+    <div style="padding-top: 10px; padding-left: 10px">
+      <form id="nodeGraphForm" class="form">
+        <label for="selectLeague">Select a League:</label>
+        <br />
+        <select
+          id="selectLeague"
+          name="Select a League"
+          onchange="loadLeagueYears(this)"
+        ></select>
+        <br />
+        <label for="selectYear">Select a Year:</label>
+        <br />
+        <select id="selectYear" name="Select a Year"></select>
+        <br />
+        <div style="padding-top: 10px; padding-left: 50px">
+          <button type="button" onclick="getNodeData()">Submit</button>
+        </div>
+        <br />
+        Note: Select League then Year
+      </form>
     </div>
     <div>
       <script>
+        //declare global vars
         let data_filter = undefined;
+        let matchesJson;
+        let teamCsv;
+        let matchesArray = [];
+        let leaguesCsv;
+        let league_array = [];
+
+        function getBaseData() {
+          //reading the data
+
+          var PromiseWrapper = (xhr, d) =>
+            new Promise((resolve) => xhr(d, (p) => resolve(p)));
+
+          Promise.all([
+            PromiseWrapper(d3.json, "data/match.json"),
+            PromiseWrapper(d3.csv, "data/team.csv"),
+            PromiseWrapper(d3.csv, "data/league.csv"),
+          ]).then((resolve) => {
+            matchesJson = resolve[0];
+            teamCsv = resolve[1];
+            leaguesCsv = resolve[2];
+            matchesJson.forEach(function (data) {
+              let home_t;
+              let away_t;
+              teamCsv.forEach(function (team_data) {
+                let temp_arr = []; // might need to change this need later
+                if (team_data.team_api_id == data.home_team_api_id) {
+                  home_t = team_data.team_long_name;
+                } else if (team_data.team_api_id == data.away_team_api_id) {
+                  away_t = team_data.team_long_name;
+                }
+              });
+              matchesArray.push([home_t, away_t, home_t + away_t]);
+              //call next function here
+              //throw new Error();
+              //the above was to force an error and only have to do this one at a time
+            });
+            leaguesCsv.forEach(function (data) {
+              league_array.push(data.name);
+            });
+
+            console.log(matchesJson);
+
+            makeForm();
+          });
+        }
+
+        function makeForm() {
+          var select = document.getElementById("selectLeague");
+          var options = league_array;
+          var el = document.createElement("option");
+          el.textContent = "";
+          el.value = "";
+          select.appendChild(el);
+          for (var i = 0; i < options.length; i++) {
+            var opt = options[i];
+            var el = document.createElement("option");
+            el.textContent = opt;
+            el.value = opt;
+            select.appendChild(el);
+          }
+        }
+
+        function loadLeagueYears(input) {
+          var btnValue = input.options[input.selectedIndex].value;
+          let league_id;
+          let year_array = [];
+          leaguesCsv.forEach(function (data) {
+            if (data.name === btnValue) {
+              league_id = data.id;
+            }
+          });
+
+          matchesJson.forEach(function (data) {
+            if (data.league_id.toString() === league_id.toString()) {
+              if (year_array.includes(data.season) === false) {
+                year_array.push(data.season);
+              }
+            }
+          });
+          //example: btnValue = Belgium Jupiler League
+
+          var select = document.getElementById("selectYear");
+          var options = year_array;
+          var el = document.createElement("option");
+          el.textContent = "";
+          el.value = "";
+          select.appendChild(el);
+          for (var i = 0; i < options.length; i++) {
+            var opt = options[i];
+            var el = document.createElement("option");
+            el.textContent = opt;
+            el.value = opt;
+            select.appendChild(el);
+          }
+        }
+
+        function getNodeData() {
+          let yearElement = document.getElementById("selectYear");
+          let yearValue = yearElement.options[yearElement.selectedIndex].value;
+          let leagueElement = document.getElementById("selectLeague");
+          let leagueValue =
+            leagueElement.options[leagueElement.selectedIndex].value;
+
+          if (leagueValue === "" || yearValue === "") {
+            alert("Please select BOTH a year and a league");
+            return;
+          }
+          return {
+            nodes: [
+              {
+                name: "Match1",
+              },
+              {
+                name: "Match2",
+              },
+              {
+                name: "Match3",
+              },
+            ],
+            links: [
+              {
+                source: 1,
+                target: 0,
+              },
+              {
+                source: 2,
+                target: 0,
+              },
+            ],
+          };
+        }
+
         function makeNodegraph() {
           var width = 960,
             height = 500;
@@ -49,7 +196,7 @@
             .attr("width", width)
             .attr("height", height);
 
-          var json = getData(data_filter); //undef for now will need to update
+          var json = getNodeData(); //undef for now will need to update
 
           var force = d3.layout
             .force()
@@ -126,83 +273,12 @@
           });
         }
 
-        let matchesJson;
-        let teamCsv;
-        let matchesArray = [];
-        let leaguesCsv;
-
-        function getData(league_id) {
-          let league_array = [];
-          //reading the data
-
-          var PromiseWrapper = (xhr, d) =>
-            new Promise((resolve) => xhr(d, (p) => resolve(p)));
-
-          Promise.all([
-            PromiseWrapper(d3.json, "data/match.json"),
-            PromiseWrapper(d3.csv, "data/team.csv"),
-            PromiseWrapper(d3.csv, "data/league.csv"),
-          ]).then((resolve) => {
-            matchesJson = resolve[0].results;
-            teamCsv = resolve[1];
-            leaguesCsv = resolve[2];
-            matchesJson.forEach(function (data) {
-              let home_t;
-              let away_t;
-              teamCsv.forEach(function (team_data) {
-                let temp_arr = []; // might need to change this need later
-                if (team_data.team_api_id == data.home_team_api_id) {
-                  home_t = team_data.team_long_name;
-                } else if (team_data.team_api_id == data.away_team_api_id) {
-                  away_t = team_data.team_long_name;
-                }
-              });
-              matchesArray.push([home_t, away_t, home_t + away_t]);
-              //call next function here
-              //throw new Error();
-              //the above was to force an error and only have to do this one at a time
-            });
-            leaguesCsv.forEach(function (data) {
-              league_array.push(data.name);
-            });
-
-            var select = document.getElementById("selectNumber");
-            var options = league_array;
-            //var options = ["1", "2", "3", "4", "5"];
-            for (var i = 0; i < options.length; i++) {
-              var opt = options[i];
-              var el = document.createElement("option");
-              el.textContent = opt;
-              el.value = opt;
-              select.appendChild(el);
-            }
-          });
-
-          return {
-            nodes: [
-              {
-                name: "Match1",
-              },
-              {
-                name: "Match2",
-              },
-              {
-                name: "Match3",
-              },
-            ],
-            links: [
-              {
-                source: 1,
-                target: 0,
-              },
-              {
-                source: 2,
-                target: 0,
-              },
-            ],
-          };
+        function main() {
+          getBaseData();
+          //makeNodegraph();
         }
-        makeNodegraph();
+
+        main();
       </script>
     </div>
   </body>
