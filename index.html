@@ -219,34 +219,11 @@
             }
             makeNodegraph(temp_obj);
           }
-          // return {
-          //   nodes: [
-          //     {
-          //       name: "Match1",
-          //     },
-          //     {
-          //       name: "Match2",
-          //     },
-          //     {
-          //       name: "Match3",
-          //     },
-          //   ],
-          //   links: [
-          //     {
-          //       source: 1,
-          //       target: 0,
-          //     },
-          //     {
-          //       source: 2,
-          //       target: 0,
-          //     },
-          //   ],
-          // };
         }
 
         function makeNodegraph(node_data) {
-          var width = 960,
-            height = 500;
+          var width = 1700,
+            height = 1000;
 
           var svg = d3
             .select("body")
@@ -281,21 +258,9 @@
             .attr("class", "node")
             .call(force.drag);
 
-          let indexer = 0;
-
           node
             .append("image")
             .attr("xlink:href", function (d) {
-              // console.log(d);
-              // if (indexer == 0) {
-              //   var imagePath = "match_banners/Rayo VallecanoVillarreal CF.png";
-              //   indexer = indexer + 1;
-              // } else if (indexer == 1) {
-              //   var imagePath = "match_banners/Atletico MadridGranada CF.png";
-              //   indexer = indexer + 1;
-              // } else {
-              //   var imagePath = "match_banners/FC St. GallenBSC Young Boys.png";
-              // }
               return "match_banners/" + d.name + ".png";
             })
             .attr("x", -8)
