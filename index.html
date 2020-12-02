@@ -59,6 +59,7 @@
         let matchesArray = [];
         let leaguesCsv;
         let league_array = [];
+        let league_id;
 
         function getBaseData() {
           //reading the data
@@ -74,6 +75,7 @@
             matchesJson = resolve[0];
             teamCsv = resolve[1];
             leaguesCsv = resolve[2];
+            let matchesJson_new = [];
             matchesJson.forEach(function (data) {
               let home_t;
               let away_t;
@@ -85,7 +87,12 @@
                   away_t = team_data.team_long_name;
                 }
               });
-              matchesArray.push([home_t, away_t, home_t + away_t]);
+              // matchesArray.push([home_t, away_t, home_t + away_t]);
+              let temp_data = data;
+              temp_data["home_team_name"] = home_t;
+              temp_data["away_team_name"] = away_t;
+              temp_data["match_name"] = home_t + away_t;
+              matchesJson_new.push(temp_data);
               //call next function here
               //throw new Error();
               //the above was to force an error and only have to do this one at a time
@@ -94,7 +101,8 @@
               league_array.push(data.name);
             });
 
-            console.log(matchesJson);
+            matchesJson = matchesJson_new;
+            // console.log(matchesJson);
 
             makeForm();
           });
@@ -118,7 +126,6 @@
 
         function loadLeagueYears(input) {
           var btnValue = input.options[input.selectedIndex].value;
-          let league_id;
           let year_array = [];
           leaguesCsv.forEach(function (data) {
             if (data.name === btnValue) {
@@ -133,7 +140,6 @@
               }
             }
           });
-          //example: btnValue = Belgium Jupiler League
 
           var select = document.getElementById("selectYear");
           var options = year_array;
@@ -151,39 +157,97 @@
         }
 
         function getNodeData() {
-          let yearElement = document.getElementById("selectYear");
-          let yearValue = yearElement.options[yearElement.selectedIndex].value;
           let leagueElement = document.getElementById("selectLeague");
           let leagueValue =
             leagueElement.options[leagueElement.selectedIndex].value;
+          let yearValue;
+          let yearElement;
+          try {
+            yearElement = document.getElementById("selectYear");
+            yearValue = yearElement.options[yearElement.selectedIndex].value;
+          } catch (err) {
+            alert("Please select BOTH a year and a league");
+            return;
+          }
 
           if (leagueValue === "" || yearValue === "") {
             alert("Please select BOTH a year and a league");
             return;
+          } else {
+            let filtered_data = [];
+            let highest_stage; //q to self: how to handle when they play more than once in a season for other team to pick up?
+            matchesJson.forEach(function (data) {
+              if (
+                data.league_id.toString() === league_id.toString() &&
+                data.season.toString() === yearValue.toString()
+              ) {
+                if (highest_stage === undefined) {
+                  highest_stage = data.stage;
+                } else if (highest_stage < data.stage) {
+                  highest_stage = data.stage;
+                }
+                filtered_data.push(data);
+              }
+            });
+            filtered_data.sort((a, b) =>
+              a.stage > b.stage
+                ? 1
+                : a.stage === b.stage
+                ? a.stage > b.size
+                  ? 1
+                  : -1
+                : -1
+            );
+            let temp_obj = { nodes: [], links: [] };
+            for (var y = 0; y < filtered_data.length; y++) {
+              let destinations = 0;
+              temp_obj.nodes.push({ name: filtered_data[y].match_name });
+              let indexer = y + 1;
+              while (indexer < filtered_data.length) {
+                if (destinations === 2 || y + 1 === highest_stage) {
+                  break;
+                } else {
+                  if (
+                    filtered_data[y].home_team_api_id.toString() ===
+                      filtered_data[indexer].home_team_api_id.toString() ||
+                    filtered_data[y].home_team_api_id.toString() ===
+                      filtered_data[indexer].away_team_api_id.toString() ||
+                    filtered_data[y].away_team_api_id.toString() ===
+                      filtered_data[indexer].home_team_api_id.toString() ||
+                    filtered_data[y].away_team_api_id.toString() ===
+                      filtered_data[indexer].away_team_api_id.toString()
+                  ) {
+                    temp_obj.links.push({ source: y, target: indexer });
+                    destinations++;
+                  }
+                  indexer++;
+                }
+              }
+            }
           }
-          return {
-            nodes: [
-              {
-                name: "Match1",
-              },
-              {
-                name: "Match2",
-              },
-              {
-                name: "Match3",
-              },
-            ],
-            links: [
-              {
-                source: 1,
-                target: 0,
-              },
-              {
-                source: 2,
-                target: 0,
-              },
-            ],
-          };
+          // return {
+          //   nodes: [
+          //     {
+          //       name: "Match1",
+          //     },
+          //     {
+          //       name: "Match2",
+          //     },
+          //     {
+          //       name: "Match3",
+          //     },
+          //   ],
+          //   links: [
+          //     {
+          //       source: 1,
+          //       target: 0,
+          //     },
+          //     {
+          //       source: 2,
+          //       target: 0,
+          //     },
+          //   ],
+          // };
         }
 
         function makeNodegraph() {
