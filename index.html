@@ -41,7 +41,19 @@
         <br />
         <label for="selectYear">Select a Year:</label>
         <br />
-        <select id="selectYear" name="Select a Year"></select>
+        <select
+          id="selectYear"
+          name="Select a Year"
+          onchange="loadTeams(this)"
+        ></select>
+        <br />
+        <label for="selectTeamOne">Select Team 1:</label>
+        <br />
+        <select id="selectTeamOne" name="Select Team 1"></select>
+        <br />
+        <label for="selectTeamTwo">Select Team 2:</label>
+        <br />
+        <select id="selectTeamTwo" name="Select Team 2"></select>
         <br />
         <div style="padding-top: 10px; padding-left: 50px">
           <button type="button" onclick="getNodeData()">Submit</button>
@@ -53,10 +65,8 @@
     <div>
       <script>
         //declare global vars
-        let data_filter = undefined;
         let matchesJson;
         let teamCsv;
-        let matchesArray = [];
         let leaguesCsv;
         let league_array = [];
         let league_id;
@@ -135,7 +145,64 @@
           });
 
           var select = document.getElementById("selectYear");
+          while (select.options.length > 0) {
+            select.remove(0);
+          }
           var options = year_array;
+          var el = document.createElement("option");
+          el.textContent = "";
+          el.value = "";
+          select.appendChild(el);
+          for (var i = 0; i < options.length; i++) {
+            var opt = options[i];
+            var el = document.createElement("option");
+            el.textContent = opt;
+            el.value = opt;
+            select.appendChild(el);
+          }
+        }
+
+        function loadTeams(input) {
+          var btnValue = input.options[input.selectedIndex].value;
+          let team_array = [];
+          matchesJson.forEach(function (data) {
+            if (
+              data.season.toString() === btnValue.toString() &&
+              data.league_id.toString() === league_id.toString()
+            ) {
+              if (team_array.includes(data.home_team_name) === false) {
+                team_array.push(data.home_team_name);
+              }
+              if (team_array.includes(data.away_team_name) === false) {
+                team_array.push(data.away_team_name);
+              }
+            }
+          });
+
+          team_array.sort();
+
+          var select = document.getElementById("selectTeamOne");
+          while (select.options.length > 0) {
+            select.remove(0);
+          }
+          var options = team_array;
+          var el = document.createElement("option");
+          el.textContent = "";
+          el.value = "";
+          select.appendChild(el);
+          for (var i = 0; i < options.length; i++) {
+            var opt = options[i];
+            var el = document.createElement("option");
+            el.textContent = opt;
+            el.value = opt;
+            select.appendChild(el);
+          }
+
+          var select = document.getElementById("selectTeamTwo");
+          while (select.options.length > 0) {
+            select.remove(0);
+          }
+          var options = team_array;
           var el = document.createElement("option");
           el.textContent = "";
           el.value = "";
@@ -155,9 +222,19 @@
             leagueElement.options[leagueElement.selectedIndex].value;
           let yearValue;
           let yearElement;
+          let teamOneValue;
+          let teamOneElement;
+          let teamTwoValue;
+          let teamTwoElement;
           try {
             yearElement = document.getElementById("selectYear");
             yearValue = yearElement.options[yearElement.selectedIndex].value;
+            teamOneElement = document.getElementById("selectTeamOne");
+            teamOneValue =
+              teamOneElement.options[teamOneElement.selectedIndex].value;
+            teamTwoElement = document.getElementById("selectTeamTwo");
+            teamTwoValue =
+              teamTwoElement.options[teamTwoElement.selectedIndex].value;
           } catch (err) {
             alert("Please select BOTH a year and a league");
             return;
@@ -166,13 +243,22 @@
           if (leagueValue === "" || yearValue === "") {
             alert("Please select BOTH a year and a league");
             return;
+          } else if (teamOneValue === "" || teamTwoValue === "") {
+            alert("Please select TWO teams");
+            return;
+          } else if (teamOneValue === teamTwoValue) {
+            alert("Please ensure teams selected are DIFFERENT teams");
           } else {
             let filtered_data = [];
-            let highest_stage; //q to self: how to handle when they play more than once in a season for other team to pick up?
+            let highest_stage; //q to self: how to handle when they play more than once in a season for other visual to pick up?
             matchesJson.forEach(function (data) {
               if (
                 data.league_id.toString() === league_id.toString() &&
-                data.season.toString() === yearValue.toString()
+                data.season.toString() === yearValue.toString() &&
+                (data.away_team_name.toString() === teamOneValue.toString() ||
+                  data.away_team_name.toString() === teamTwoValue.toString() ||
+                  data.home_team_name.toString() === teamOneValue.toString() ||
+                  data.home_team_name.toString() === teamTwoValue.toString())
               ) {
                 if (highest_stage === undefined) {
                   highest_stage = data.stage;
@@ -225,11 +311,14 @@
           var width = 1700,
             height = 1000;
 
+          d3.select("#nodeGraph").remove();
+
           var svg = d3
             .select("body")
             .append("svg")
             .attr("width", width)
-            .attr("height", height);
+            .attr("height", height)
+            .attr("id", "nodeGraph");
 
           var json = node_data;
 
