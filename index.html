@@ -2,11 +2,11 @@
 <html lang="en">
   <meta charset="utf-8" />
   <style>
-    .link {
-      /* stroke: #aaa; */
-      stroke: #ccc;
-      /* stroke-width: 1.5px; */
-    }
+    /* .link { */
+    /* stroke: #aaa; */
+    /* stroke: #ccc; */
+    /* stroke-width: 1.5px; */
+    /* } */
 
     .node {
       pointer-events: all;
@@ -320,6 +320,41 @@
             .attr("height", height)
             .attr("id", "nodeGraph");
 
+          // svg
+          //   .append("svg:defs")
+          //   .selectAll("marker")
+          //   .data(["end"])
+          //   .enter()
+          //   .append("svg:marker")
+          //   .attr("id", String)
+          //   .attr("viewBox", "0 -5 10 10")
+          //   .attr("refX", 15)
+          //   .attr("refY", -1.5)
+          //   .attr("markerWidth", 6)
+          //   .attr("markerHeight", 6)
+          //   .attr("orient", "auto")
+          //   .append("svg:path")
+          //   .attr("d", "M0,-5L10,0L0,5");
+
+          svg
+            .append("svg:defs")
+            .selectAll("marker")
+            .data(["end"])
+            .enter()
+            .append("svg:marker")
+            .attr("id", "arrowhead")
+            .attr("viewBox", "-0 -5 10 10")
+            .attr("refX", 13)
+            .attr("refY", 0)
+            .attr("orient", "auto")
+            .attr("markerWidth", 8)
+            .attr("markerHeight", 8)
+            .attr("xoverflow", "visible")
+            .append("svg:path")
+            .attr("d", "M 0,-5 L 10 ,0 L 0,5")
+            .attr("fill", "#999")
+            .style("stroke", "none");
+
           var json = node_data;
 
           var force = d3.layout
@@ -337,7 +372,10 @@
             .data(json.links)
             .enter()
             .append("line")
-            .attr("class", "link");
+            // .attr("class", "link")
+            .attr("stroke", "#ccc")
+            // .attr("marker-end", "url(#end)");
+            .attr("marker-end", "url(#arrowhead)");
 
           var node = svg
             .selectAll(".node")
@@ -374,10 +412,18 @@
                 return d.source.y;
               })
               .attr("x2", function (d) {
-                return d.target.x;
+                if (d.source.x < d.target.x) {
+                  return d.target.x - 2;
+                } else {
+                  return d.target.x + 2;
+                }
               })
               .attr("y2", function (d) {
-                return d.target.y;
+                if (d.source.y < d.target.y) {
+                  return d.target.y - 2;
+                } else {
+                  return d.target.y + 2;
+                }
               });
 
             node.attr("transform", function (d) {
