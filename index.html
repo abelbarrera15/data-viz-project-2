@@ -20,6 +20,22 @@
       pointer-events: none;
       font-size: 1.3rem;
     }
+
+    a {
+      text-decoration: none;
+      display: inline-block;
+      padding: 8px 16px;
+    }
+
+    a:hover {
+      background-color: #ddd;
+      color: black;
+    }
+
+    .previous {
+      background-color: #4caf50;
+      color: black;
+    }
   </style>
   <head>
     <!-- Latest compiled CSS v3.4.1 -->
@@ -35,7 +51,7 @@
     <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
   </head>
   <body>
-    <div class="row">
+    <div class="row" id="overview">
       <div class="col-sm-3">
         <div style="padding-top: 10px; padding-left: 10px">
           <form id="nodeGraphForm" class="form">
@@ -72,510 +88,607 @@
         </div>
       </div>
       <div class="col-sm-9" id="nodeHolder"></div>
-      <script>
-        //declare global vars
-        let matchesJson;
-        let teamCsv;
-        let leaguesCsv;
-        let league_array = [];
-        let league_id;
-        let teamOneValue;
-        let teamTwoValue;
+    </div>
+    <div class="row" id="details" style="display: none">
+      <a href="#" onclick="showNodeDiv();return false;" class="previous"
+        >&laquo; Go Back</a
+      >
+    </div>
+    <script>
+      //declare global vars
+      let matchesJson;
+      let teamCsv;
+      let leaguesCsv;
+      let league_array = [];
+      let league_id;
+      let teamOneValue;
+      let teamTwoValue;
+      let origDisplayStyle = undefined;
 
-        function getBaseData() {
-          //reading the data
+      function getBaseData() {
+        //reading the data
 
-          var PromiseWrapper = (xhr, d) =>
-            new Promise((resolve) => xhr(d, (p) => resolve(p)));
+        var PromiseWrapper = (xhr, d) =>
+          new Promise((resolve) => xhr(d, (p) => resolve(p)));
 
-          Promise.all([
-            PromiseWrapper(d3.json, "data/match.json"),
-            PromiseWrapper(d3.csv, "data/team.csv"),
-            PromiseWrapper(d3.csv, "data/league.csv"),
-          ]).then((resolve) => {
-            matchesJson = resolve[0];
-            teamCsv = resolve[1];
-            leaguesCsv = resolve[2];
-            let matchesJson_new = [];
-            matchesJson.forEach(function (data) {
-              let home_t;
-              let away_t;
-              teamCsv.forEach(function (team_data) {
-                if (team_data.team_api_id == data.home_team_api_id) {
-                  home_t = team_data.team_long_name;
-                } else if (team_data.team_api_id == data.away_team_api_id) {
-                  away_t = team_data.team_long_name;
-                }
-              });
-              let temp_data = data;
-              temp_data["home_team_name"] = home_t;
-              temp_data["away_team_name"] = away_t;
-              temp_data["match_name"] = home_t + away_t;
-              matchesJson_new.push(temp_data);
-            });
-            leaguesCsv.forEach(function (data) {
-              league_array.push(data.name);
-            });
-
-            matchesJson = matchesJson_new;
-            makeForm();
-          });
-        }
-
-        function makeForm() {
-          var select = document.getElementById("selectLeague");
-          var options = league_array;
-          var el = document.createElement("option");
-          el.textContent = "";
-          el.value = "";
-          select.appendChild(el);
-          for (var i = 0; i < options.length; i++) {
-            var opt = options[i];
-            var el = document.createElement("option");
-            el.textContent = opt;
-            el.value = opt;
-            select.appendChild(el);
-          }
-        }
-
-        function loadLeagueYears(input) {
-          var btnValue = input.options[input.selectedIndex].value;
-          let year_array = [];
-          leaguesCsv.forEach(function (data) {
-            if (data.name === btnValue) {
-              league_id = data.id;
-            }
-          });
-
+        Promise.all([
+          PromiseWrapper(d3.json, "data/match.json"),
+          PromiseWrapper(d3.csv, "data/team.csv"),
+          PromiseWrapper(d3.csv, "data/league.csv"),
+        ]).then((resolve) => {
+          matchesJson = resolve[0];
+          teamCsv = resolve[1];
+          leaguesCsv = resolve[2];
+          let matchesJson_new = [];
           matchesJson.forEach(function (data) {
-            if (data.league_id.toString() === league_id.toString()) {
-              if (year_array.includes(data.season) === false) {
-                year_array.push(data.season);
+            let home_t;
+            let away_t;
+            teamCsv.forEach(function (team_data) {
+              if (team_data.team_api_id == data.home_team_api_id) {
+                home_t = team_data.team_long_name;
+              } else if (team_data.team_api_id == data.away_team_api_id) {
+                away_t = team_data.team_long_name;
               }
-            }
+            });
+            let temp_data = data;
+            temp_data["home_team_name"] = home_t;
+            temp_data["away_team_name"] = away_t;
+            temp_data["match_name"] = home_t + away_t;
+            matchesJson_new.push(temp_data);
+          });
+          leaguesCsv.forEach(function (data) {
+            league_array.push(data.name);
           });
 
-          var select = document.getElementById("selectYear");
-          while (select.options.length > 0) {
-            select.remove(0);
-          }
-          var options = year_array;
+          matchesJson = matchesJson_new;
+          makeForm();
+        });
+      }
+
+      function makeForm() {
+        var select = document.getElementById("selectLeague");
+        var options = league_array;
+        var el = document.createElement("option");
+        el.textContent = "";
+        el.value = "";
+        select.appendChild(el);
+        for (var i = 0; i < options.length; i++) {
+          var opt = options[i];
           var el = document.createElement("option");
-          el.textContent = "";
-          el.value = "";
+          el.textContent = opt;
+          el.value = opt;
           select.appendChild(el);
-          for (var i = 0; i < options.length; i++) {
-            var opt = options[i];
-            var el = document.createElement("option");
-            el.textContent = opt;
-            el.value = opt;
-            select.appendChild(el);
+        }
+      }
+
+      function loadLeagueYears(input) {
+        var btnValue = input.options[input.selectedIndex].value;
+        let year_array = [];
+        leaguesCsv.forEach(function (data) {
+          if (data.name === btnValue) {
+            league_id = data.id;
           }
+        });
+
+        matchesJson.forEach(function (data) {
+          if (data.league_id.toString() === league_id.toString()) {
+            if (year_array.includes(data.season) === false) {
+              year_array.push(data.season);
+            }
+          }
+        });
+
+        var select = document.getElementById("selectYear");
+        while (select.options.length > 0) {
+          select.remove(0);
+        }
+        var options = year_array;
+        var el = document.createElement("option");
+        el.textContent = "";
+        el.value = "";
+        select.appendChild(el);
+        for (var i = 0; i < options.length; i++) {
+          var opt = options[i];
+          var el = document.createElement("option");
+          el.textContent = opt;
+          el.value = opt;
+          select.appendChild(el);
+        }
+      }
+
+      function loadTeams(input) {
+        var btnValue = input.options[input.selectedIndex].value;
+        let team_array = [];
+        matchesJson.forEach(function (data) {
+          if (
+            data.season.toString() === btnValue.toString() &&
+            data.league_id.toString() === league_id.toString()
+          ) {
+            if (team_array.includes(data.home_team_name) === false) {
+              team_array.push(data.home_team_name);
+            }
+            if (team_array.includes(data.away_team_name) === false) {
+              team_array.push(data.away_team_name);
+            }
+          }
+        });
+
+        team_array.sort();
+
+        var select = document.getElementById("selectTeamOne");
+        while (select.options.length > 0) {
+          select.remove(0);
+        }
+        var options = team_array;
+        var el = document.createElement("option");
+        el.textContent = "";
+        el.value = "";
+        select.appendChild(el);
+        for (var i = 0; i < options.length; i++) {
+          var opt = options[i];
+          var el = document.createElement("option");
+          el.textContent = opt;
+          el.value = opt;
+          select.appendChild(el);
         }
 
-        function loadTeams(input) {
-          var btnValue = input.options[input.selectedIndex].value;
-          let team_array = [];
+        var select = document.getElementById("selectTeamTwo");
+        while (select.options.length > 0) {
+          select.remove(0);
+        }
+        var options = team_array;
+        var el = document.createElement("option");
+        el.textContent = "";
+        el.value = "";
+        select.appendChild(el);
+        for (var i = 0; i < options.length; i++) {
+          var opt = options[i];
+          var el = document.createElement("option");
+          el.textContent = opt;
+          el.value = opt;
+          select.appendChild(el);
+        }
+      }
+
+      function getNodeData() {
+        let leagueElement = document.getElementById("selectLeague");
+        let leagueValue =
+          leagueElement.options[leagueElement.selectedIndex].value;
+        let yearValue;
+        let yearElement;
+        let teamOneElement;
+        let teamTwoElement;
+        try {
+          yearElement = document.getElementById("selectYear");
+          yearValue = yearElement.options[yearElement.selectedIndex].value;
+          teamOneElement = document.getElementById("selectTeamOne");
+          teamOneValue =
+            teamOneElement.options[teamOneElement.selectedIndex].value;
+          teamTwoElement = document.getElementById("selectTeamTwo");
+          teamTwoValue =
+            teamTwoElement.options[teamTwoElement.selectedIndex].value;
+        } catch (err) {
+          alert("Please select BOTH a year and a league");
+          return;
+        }
+
+        if (leagueValue === "" || yearValue === "") {
+          alert("Please select BOTH a year and a league");
+          return;
+        } else if (teamOneValue === "" || teamTwoValue === "") {
+          alert("Please select TWO teams");
+          return;
+        } else if (teamOneValue === teamTwoValue) {
+          alert("Please ensure teams selected are DIFFERENT teams");
+        } else {
+          let filtered_data = [];
+          let highest_stage;
           matchesJson.forEach(function (data) {
             if (
-              data.season.toString() === btnValue.toString() &&
-              data.league_id.toString() === league_id.toString()
+              data.league_id.toString() === league_id.toString() &&
+              data.season.toString() === yearValue.toString() &&
+              (data.away_team_name.toString() === teamOneValue.toString() ||
+                data.away_team_name.toString() === teamTwoValue.toString() ||
+                data.home_team_name.toString() === teamOneValue.toString() ||
+                data.home_team_name.toString() === teamTwoValue.toString())
             ) {
-              if (team_array.includes(data.home_team_name) === false) {
-                team_array.push(data.home_team_name);
+              if (highest_stage === undefined) {
+                highest_stage = data.stage;
+              } else if (highest_stage < data.stage) {
+                highest_stage = data.stage;
               }
-              if (team_array.includes(data.away_team_name) === false) {
-                team_array.push(data.away_team_name);
-              }
+              filtered_data.push(data);
             }
           });
-
-          team_array.sort();
-
-          var select = document.getElementById("selectTeamOne");
-          while (select.options.length > 0) {
-            select.remove(0);
-          }
-          var options = team_array;
-          var el = document.createElement("option");
-          el.textContent = "";
-          el.value = "";
-          select.appendChild(el);
-          for (var i = 0; i < options.length; i++) {
-            var opt = options[i];
-            var el = document.createElement("option");
-            el.textContent = opt;
-            el.value = opt;
-            select.appendChild(el);
-          }
-
-          var select = document.getElementById("selectTeamTwo");
-          while (select.options.length > 0) {
-            select.remove(0);
-          }
-          var options = team_array;
-          var el = document.createElement("option");
-          el.textContent = "";
-          el.value = "";
-          select.appendChild(el);
-          for (var i = 0; i < options.length; i++) {
-            var opt = options[i];
-            var el = document.createElement("option");
-            el.textContent = opt;
-            el.value = opt;
-            select.appendChild(el);
-          }
-        }
-
-        function getNodeData() {
-          let leagueElement = document.getElementById("selectLeague");
-          let leagueValue =
-            leagueElement.options[leagueElement.selectedIndex].value;
-          let yearValue;
-          let yearElement;
-          let teamOneElement;
-          let teamTwoElement;
-          try {
-            yearElement = document.getElementById("selectYear");
-            yearValue = yearElement.options[yearElement.selectedIndex].value;
-            teamOneElement = document.getElementById("selectTeamOne");
-            teamOneValue =
-              teamOneElement.options[teamOneElement.selectedIndex].value;
-            teamTwoElement = document.getElementById("selectTeamTwo");
-            teamTwoValue =
-              teamTwoElement.options[teamTwoElement.selectedIndex].value;
-          } catch (err) {
-            alert("Please select BOTH a year and a league");
-            return;
-          }
-
-          if (leagueValue === "" || yearValue === "") {
-            alert("Please select BOTH a year and a league");
-            return;
-          } else if (teamOneValue === "" || teamTwoValue === "") {
-            alert("Please select TWO teams");
-            return;
-          } else if (teamOneValue === teamTwoValue) {
-            alert("Please ensure teams selected are DIFFERENT teams");
-          } else {
-            let filtered_data = [];
-            let highest_stage; //q to self: how to handle when they play more than once in a season for other visual to pick up? -- match id sending
-            matchesJson.forEach(function (data) {
-              if (
-                data.league_id.toString() === league_id.toString() &&
-                data.season.toString() === yearValue.toString() &&
-                (data.away_team_name.toString() === teamOneValue.toString() ||
-                  data.away_team_name.toString() === teamTwoValue.toString() ||
-                  data.home_team_name.toString() === teamOneValue.toString() ||
-                  data.home_team_name.toString() === teamTwoValue.toString())
-              ) {
-                if (highest_stage === undefined) {
-                  highest_stage = data.stage;
-                } else if (highest_stage < data.stage) {
-                  highest_stage = data.stage;
-                }
-                filtered_data.push(data);
-              }
-            });
-            filtered_data.sort((a, b) =>
-              a.date > b.date
+          filtered_data.sort((a, b) =>
+            a.date > b.date
+              ? 1
+              : a.date === b.date
+              ? a.date > b.date
                 ? 1
-                : a.date === b.date
-                ? a.date > b.date
-                  ? 1
-                  : -1
                 : -1
-            );
-            let temp_obj = { nodes: [], links: [] };
-            for (var y = 0; y < filtered_data.length; y++) {
-              let destinations = 0;
-              let winner_name;
+              : -1
+          );
+          let temp_obj = { nodes: [], links: [] };
+          for (var y = 0; y < filtered_data.length; y++) {
+            let destinations = 0;
+            let winner_name;
+            if (
+              filtered_data[y].home_team_goal > filtered_data[y].away_team_goal
+            ) {
+              winner_name = filtered_data[y].home_team_name;
+            } else if (
+              filtered_data[y].home_team_goal < filtered_data[y].away_team_goal
+            ) {
+              winner_name = filtered_data[y].away_team_name;
+            } else {
+              winner_name = "tie";
+            }
+            temp_obj.nodes.push({
+              name: filtered_data[y].match_name,
+              home_team_name: filtered_data[y].home_team_name,
+              away_team_name: filtered_data[y].away_team_name,
+              winner: winner_name,
+              home_goals: filtered_data[y].home_team_goal,
+              away_goals: filtered_data[y].away_team_goal,
+              match_id: filtered_data[y].id,
+            });
+            let indexer = y + 1;
+            while (indexer < filtered_data.length) {
+              let numLinks = 1;
               if (
-                filtered_data[y].home_team_goal >
-                filtered_data[y].away_team_goal
+                (filtered_data[y].home_team_name.toString() ===
+                  teamOneValue.toString() &&
+                  filtered_data[y].away_team_name.toString() ===
+                    teamTwoValue.toString()) ||
+                (filtered_data[y].home_team_name.toString() ===
+                  teamTwoValue.toString() &&
+                  filtered_data[y].away_team_name.toString() ===
+                    teamOneValue.toString())
               ) {
-                winner_name = filtered_data[y].home_team_name;
-              } else if (
-                filtered_data[y].home_team_goal <
-                filtered_data[y].away_team_goal
-              ) {
-                winner_name = filtered_data[y].away_team_name;
-              } else {
-                winner_name = "tie";
+                numLinks = 2;
               }
-              temp_obj.nodes.push({
-                name: filtered_data[y].match_name,
-                home_team_name: filtered_data[y].home_team_name,
-                away_team_name: filtered_data[y].away_team_name,
-                winner: winner_name,
-                home_goals: filtered_data[y].home_team_goal,
-                away_goals: filtered_data[y].away_team_goal,
-              });
-              let indexer = y + 1;
-              while (indexer < filtered_data.length) {
-                if (destinations === 2 || y + 1 === highest_stage) {
-                  break;
-                } else {
-                  if (
-                    filtered_data[y].home_team_api_id.toString() ===
-                      filtered_data[indexer].home_team_api_id.toString() ||
-                    filtered_data[y].home_team_api_id.toString() ===
-                      filtered_data[indexer].away_team_api_id.toString() ||
-                    filtered_data[y].away_team_api_id.toString() ===
-                      filtered_data[indexer].home_team_api_id.toString() ||
-                    filtered_data[y].away_team_api_id.toString() ===
-                      filtered_data[indexer].away_team_api_id.toString()
-                  ) {
-                    temp_obj.links.push({ source: y, target: indexer });
-                    destinations++;
-                  }
-                  indexer++;
+              if (destinations === numLinks || y + 1 === highest_stage) {
+                break;
+              } else {
+                if (
+                  filtered_data[y].home_team_api_id.toString() ===
+                    filtered_data[indexer].home_team_api_id.toString() ||
+                  filtered_data[y].home_team_api_id.toString() ===
+                    filtered_data[indexer].away_team_api_id.toString() ||
+                  filtered_data[y].away_team_api_id.toString() ===
+                    filtered_data[indexer].home_team_api_id.toString() ||
+                  filtered_data[y].away_team_api_id.toString() ===
+                    filtered_data[indexer].away_team_api_id.toString()
+                ) {
+                  temp_obj.links.push({ source: y, target: indexer });
+                  destinations++;
                 }
+                indexer++;
               }
             }
-            makeNodegraph(temp_obj);
           }
+          makeNodegraph(temp_obj);
+        }
+      }
+
+      function makeNodegraph(node_data) {
+        //to dos:
+        //add onclick hide div and show the other
+
+        var width = document.getElementById("nodeHolder").clientWidth,
+          height = window.innerHeight;
+
+        d3.select("#nodeGraph").remove();
+
+        function zoom() {
+          var zoom = d3.event;
+          svg.attr(
+            "transform",
+            "translate(" + zoom.translate + ")scale(" + zoom.scale + ")"
+          );
         }
 
-        function makeNodegraph(node_data) {
-          //to dos:
-          //perhaps just add match # of the season per team :)
-          //add legend
+        var svg = d3
+          .select("#nodeHolder")
+          .append("svg")
+          .attr("width", width)
+          .attr("height", height)
+          .attr("id", "nodeGraph")
+          .call(d3.behavior.zoom().scaleExtent([1, 8]).on("zoom", zoom))
+          .on("dblclick.zoom", null)
+          .append("g")
+          .call(d3.behavior.zoom().scaleExtent([1, 8]).on("zoom", zoom))
+          .on("dblclick.zoom", null)
+          .append("g");
 
-          var width = document.getElementById("nodeHolder").clientWidth,
-            height = window.innerHeight;
+        svg
+          .append("svg:defs")
+          .selectAll("marker")
+          .data(["end"])
+          .enter()
+          .append("svg:marker")
+          .attr("id", "arrowhead")
+          .attr("viewBox", "-0 -5 10 10")
+          .attr("refX", 13)
+          .attr("refY", 0)
+          .attr("orient", "auto")
+          .attr("markerWidth", 8)
+          .attr("markerHeight", 8)
+          .attr("xoverflow", "visible")
+          .append("svg:path")
+          .attr("d", "M 0,-5 L 10 ,0 L 0,5")
+          .attr("fill", "#999")
+          .style("stroke", "none");
 
-          d3.select("#nodeGraph").remove();
+        var json = node_data;
 
-          function zoom() {
-            var zoom = d3.event;
-            svg.attr(
-              "transform",
-              "translate(" + zoom.translate + ")scale(" + zoom.scale + ")"
-            );
-          }
+        var force = d3.layout
+          .force()
+          .gravity(0.05)
+          .distance(100)
+          .charge(-100)
+          .size([width, height])
+          .nodes(json.nodes)
+          .links(json.links)
+          .start();
 
-          var svg = d3
-            .select("#nodeHolder")
-            .append("svg")
-            .attr("width", width)
-            .attr("height", height)
-            .attr("id", "nodeGraph")
-            .call(d3.behavior.zoom().scaleExtent([1, 8]).on("zoom", zoom))
-            .append("g")
-            .call(d3.behavior.zoom().scaleExtent([1, 8]).on("zoom", zoom))
-            .append("g");
+        function dragstart(d) {
+          d3.event.sourceEvent.preventDefault();
+          d3.event.sourceEvent.stopPropagation();
+          d3.select(this).classed("fixed", (d.fixed = true));
+        }
 
-          svg
-            .append("svg:defs")
-            .selectAll("marker")
-            .data(["end"])
-            .enter()
-            .append("svg:marker")
-            .attr("id", "arrowhead")
-            .attr("viewBox", "-0 -5 10 10")
-            .attr("refX", 13)
-            .attr("refY", 0)
-            .attr("orient", "auto")
-            .attr("markerWidth", 8)
-            .attr("markerHeight", 8)
-            .attr("xoverflow", "visible")
-            .append("svg:path")
-            .attr("d", "M 0,-5 L 10 ,0 L 0,5")
-            .attr("fill", "#999")
-            .style("stroke", "none");
+        var drag = force.drag().on("dragstart", dragstart);
 
-          var json = node_data;
+        var link = svg
+          .selectAll(".link")
+          .data(json.links)
+          .enter()
+          .append("line")
+          .attr("stroke", function (d) {
+            if (
+              d.source.winner.toString() === teamOneValue ||
+              d.source.winner.toString() === teamTwoValue
+            ) {
+              return "#00008b";
+            } else if (d.source.winner.toString() === "tie") {
+              return "#ccc";
+            } else {
+              return "#ff0000";
+            }
+          })
+          .attr("marker-end", "url(#arrowhead)");
 
-          var force = d3.layout
-            .force()
-            .gravity(0.05)
-            .distance(100)
-            .charge(-100)
-            .size([width, height])
-            .nodes(json.nodes)
-            .links(json.links)
-            .start();
+        var nodeTip = d3
+          .select("#nodeHolder")
+          .append("div")
+          .attr("class", "node-info")
+          .style("opacity", 0);
 
-          function dragstart(d) {
-            d3.event.sourceEvent.preventDefault();
-            d3.event.sourceEvent.stopPropagation();
-            d3.select(this).classed("fixed", (d.fixed = true));
-          }
+        var node = svg
+          .selectAll(".node")
+          .data(json.nodes)
+          .enter()
+          .append("g")
+          .attr("class", "node")
+          .on("mouseover", function (d, i) {
+            nodeTip.transition().duration("50").attr("opacity", ".85");
+            nodeTip.transition().duration(50).style("opacity", "1");
+            nodeTip
+              .html(
+                "Home Team: " +
+                  d.home_team_name +
+                  "</br>" +
+                  "Away Team Name: " +
+                  d.away_team_name +
+                  "</br>" +
+                  "Winning Team: " +
+                  d.winner +
+                  "</br>" +
+                  "Score: " +
+                  d.home_goals +
+                  " - " +
+                  d.away_goals
+              )
+              .style("left", d3.event.pageX - 400 + "px")
+              .style("top", d3.event.pageY + "px");
+          })
+          .on("mouseout", function (d, i) {
+            nodeTip.transition().duration("50").style("opacity", 0);
+          })
+          .on("dblclick", function (d, i) {
+            var mainElemen = document.getElementById("overview");
+            if (origDisplayStyle === undefined) {
+              origDisplayStyle = mainElemen.style.display;
+            }
+            mainElemen.style.display = "none";
+            loadMatchStats(d.match_id);
+          })
+          .call(force.drag);
 
-          var drag = force.drag().on("dragstart", dragstart);
-
-          var link = svg
-            .selectAll(".link")
-            .data(json.links)
-            .enter()
-            .append("line")
-            .attr("stroke", function (d) {
-              if (
-                d.source.winner.toString() === teamOneValue ||
-                d.source.winner.toString() === teamTwoValue
-              ) {
-                return "#00008b";
-              } else if (d.source.winner.toString() === "tie") {
-                return "#ccc";
-              } else {
-                return "#ff0000";
-              }
-            })
-            .attr("marker-end", "url(#arrowhead)");
-
-          var nodeTip = d3
-            .select("#nodeHolder")
-            .append("div")
-            .attr("class", "node-info")
-            .style("opacity", 0);
-
-          var node = svg
-            .selectAll(".node")
-            .data(json.nodes)
-            .enter()
-            .append("g")
-            .attr("class", "node")
-            .on("mouseover", function (d, i) {
-              nodeTip.transition().duration("50").attr("opacity", ".85");
-              nodeTip.transition().duration(50).style("opacity", "1");
-              nodeTip
-                .html(
-                  "Home Team: " +
-                    d.home_team_name +
-                    "</br>" +
-                    "Away Team Name: " +
-                    d.away_team_name +
-                    "</br>" +
-                    "Winning Team: " +
-                    d.winner +
-                    "</br>" +
-                    "Score: " +
-                    d.home_goals +
-                    " - " +
-                    d.away_goals
-                )
-                .style("left", d3.event.pageX - 400 + "px")
-                .style("top", d3.event.pageY + "px");
-            })
-            .on("mouseout", function (d, i) {
-              nodeTip.transition().duration("50").style("opacity", 0);
-            })
-            .call(force.drag);
-
-          node
-            .append("image")
-            .attr("xlink:href", function (d) {
-              return "match_banners/" + d.name + ".png";
-            })
-            .attr("x", -8)
-            .attr("y", -8)
-            .attr("width", function (d) {
-              return 35;
-            })
-            .attr("height", function (d) {
-              return 35;
-            });
-
-          node
-            .append("rect")
-            .attr("class", "node")
-            .attr("x", -8)
-            .attr("y", -8)
-            .attr("width", function (d) {
-              return 35;
-            })
-            .attr("height", function (d) {
-              return 35;
-            })
-            .style("fill", "transparent")
-            .style("stroke", function (d) {
-              if (
-                (d.away_team_name.toString() === teamOneValue.toString() ||
-                  d.home_team_name.toString() === teamOneValue.toString()) &&
-                (d.away_team_name.toString() === teamTwoValue.toString() ||
-                  d.home_team_name.toString() === teamTwoValue.toString())
-              ) {
-                return "#ffdb58";
-              } else {
-                return "transparent";
-              }
-            })
-            .style("stroke-width", "3px");
-
-          node
-            .append("text")
-            .attr("dx", 12)
-            .attr("dy", ".35em")
-            .text(function (d) {
-              return ""; //d.name;
-            });
-
-          force.on("tick", function () {
-            link
-              .attr("x1", function (d) {
-                return d.source.x;
-              })
-              .attr("y1", function (d) {
-                return d.source.y;
-              })
-              .attr("x2", function (d) {
-                if (d.source.x < d.target.x) {
-                  return d.target.x - 5;
-                } else {
-                  return d.target.x + 5;
-                }
-              })
-              .attr("y2", function (d) {
-                if (d.source.y < d.target.y) {
-                  return d.target.y - 5;
-                } else {
-                  return d.target.y + 5;
-                }
-              });
-
-            node.attr("transform", function (d) {
-              return "translate(" + d.x + "," + d.y + ")";
-            });
+        node
+          .append("image")
+          .attr("xlink:href", function (d) {
+            return "match_banners/" + d.name + ".png";
+          })
+          .attr("x", -8)
+          .attr("y", -8)
+          .attr("width", function (d) {
+            return 35;
+          })
+          .attr("height", function (d) {
+            return 35;
           });
 
-          var legend_nodes = svg
-            .selectAll(".legend")
-            .data([teamOneValue, teamTwoValue])
-            .enter()
-            .append("g")
-            .attr(
-              "transform",
-              (d, i) => `translate(${width - 300},${i * 20 + 20})`
-            );
+        node
+          .append("rect")
+          .attr("class", "node")
+          .attr("x", -8)
+          .attr("y", -8)
+          .attr("width", function (d) {
+            return 35;
+          })
+          .attr("height", function (d) {
+            return 35;
+          })
+          .style("fill", "transparent")
+          .style("stroke", function (d) {
+            if (
+              (d.away_team_name.toString() === teamOneValue.toString() ||
+                d.home_team_name.toString() === teamOneValue.toString()) &&
+              (d.away_team_name.toString() === teamTwoValue.toString() ||
+                d.home_team_name.toString() === teamTwoValue.toString())
+            ) {
+              return "#ffdb58";
+            } else {
+              return "transparent";
+            }
+          })
+          .style("stroke-width", "3px");
 
-          legend_nodes
-            .append("image")
-            .attr("xlink:href", function (d) {
-              return "team_logos/" + d + ".png";
+        force.on("tick", function () {
+          link
+            .attr("x1", function (d) {
+              return d.source.x;
             })
-            .attr("x", 0)
-            .attr("y", 0)
-            .attr("width", function (d) {
-              return 15;
+            .attr("y1", function (d) {
+              return d.source.y;
             })
-            .attr("height", function (d) {
-              return 15;
+            .attr("x2", function (d) {
+              if (d.source.x < d.target.x) {
+                return d.target.x - 5;
+              } else {
+                return d.target.x + 5;
+              }
+            })
+            .attr("y2", function (d) {
+              if (d.source.y < d.target.y) {
+                return d.target.y - 5;
+              } else {
+                return d.target.y + 5;
+              }
             });
 
-          legend_nodes
-            .append("text")
-            .attr("x", 20)
-            .attr("y", 15)
-            .text((d) => d);
-        }
+          node.attr("transform", function (d) {
+            return "translate(" + d.x + "," + d.y + ")";
+          });
+        });
 
-        function main() {
-          getBaseData();
-        }
+        var legend_header = svg
+          .selectAll(".legend")
+          .data(["Legend"])
+          .enter()
+          .append("g")
+          .attr(
+            "transform",
+            (d, i) => `translate(${width - 300},${i * 20 + 10})`
+          );
 
-        main();
-      </script>
-    </div>
+        legend_header
+          .append("text")
+          .attr("font-weight", 700)
+          .attr("font-size", 20)
+          .attr("x", 0)
+          .attr("y", 15)
+          .text((d) => d);
+
+        var legend_nodes = svg
+          .selectAll(".legend")
+          .data([teamOneValue, teamTwoValue])
+          .enter()
+          .append("g")
+          .attr(
+            "transform",
+            (d, i) => `translate(${width - 300},${i * 20 + 40})`
+          );
+
+        legend_nodes
+          .append("image")
+          .attr("xlink:href", function (d) {
+            return "team_logos/" + d + ".png";
+          })
+          .attr("x", 0)
+          .attr("y", 0)
+          .attr("width", function (d) {
+            return 15;
+          })
+          .attr("height", function (d) {
+            return 15;
+          });
+
+        legend_nodes
+          .append("text")
+          .attr("x", 20)
+          .attr("y", 15)
+          .text((d) => d);
+
+        var legend_links = svg
+          .selectAll(".legend")
+          .data(["win", "loss", "tie"])
+          .enter()
+          .append("g")
+          .attr(
+            "transform",
+            (d, i) => `translate(${width - 300},${i * 20 + 90})`
+          );
+
+        legend_links
+          .append("svg:defs")
+          .append("svg:marker")
+          .attr("id", "triangle")
+          .attr("refX", 6)
+          .attr("refY", 6)
+          .attr("markerWidth", 30)
+          .attr("markerHeight", 30)
+          .attr("orient", "auto")
+          .append("path")
+          .attr("d", "M 0 0 12 6 0 12 3 6")
+          .attr("fill", "#999")
+          .style("stroke", "none");
+
+        legend_links
+          .append("line")
+          .attr("x1", 0)
+          .attr("y1", 0)
+          .attr("x2", 50)
+          .attr("y2", 0)
+          .attr("stroke-width", 1)
+          .attr("stroke", function (d) {
+            if (d === "win") {
+              return "#00008b";
+            } else if (d === "loss") {
+              return "#ff0000";
+            } else {
+              return "#ccc";
+            }
+          })
+          .attr("marker-end", "url(#triangle)");
+
+        legend_links
+          .append("text")
+          .attr("x", 60)
+          .attr("y", 3)
+          .text((d) => d);
+      }
+
+      function loadMatchStats(match_id) {
+        var statsElemen = document.getElementById("details");
+        statsElemen.style.display = origDisplayStyle;
+      }
+
+      function showNodeDiv() {
+        var statsElemen = document.getElementById("details");
+        statsElemen.style.display = "none";
+        var mainElemen = document.getElementById("overview");
+        mainElemen.style.display = origDisplayStyle;
+      }
+
+      function main() {
+        getBaseData();
+      }
+
+      main();
+    </script>
   </body>
 </html>
