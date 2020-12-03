@@ -9,7 +9,7 @@
       font: 10px sans-serif;
     }
 
-    div.scatter-info {
+    div.node-info {
       position: absolute;
       text-align: center;
       padding: 0.5rem;
@@ -278,10 +278,10 @@
               }
             });
             filtered_data.sort((a, b) =>
-              a.stage > b.stage
+              a.date > b.date
                 ? 1
-                : a.stage === b.stage
-                ? a.stage > b.size
+                : a.date === b.date
+                ? a.date > b.date
                   ? 1
                   : -1
                 : -1
@@ -308,6 +308,8 @@
                 home_team_name: filtered_data[y].home_team_name,
                 away_team_name: filtered_data[y].away_team_name,
                 winner: winner_name,
+                home_goals: filtered_data[y].home_team_goal,
+                away_goals: filtered_data[y].away_team_goal,
               });
               let indexer = y + 1;
               while (indexer < filtered_data.length) {
@@ -338,7 +340,6 @@
         function makeNodegraph(node_data) {
           //to dos:
           //perhaps just add match # of the season per team :)
-          //need to fix when more than 2 go to the same node -- why is it happening? -- probably the sort. Need to investigate
           //add legend
 
           var width = document.getElementById("nodeHolder").clientWidth,
@@ -426,7 +427,7 @@
           var nodeTip = d3
             .select("#nodeHolder")
             .append("div")
-            .attr("class", "scatter-info")
+            .attr("class", "node-info")
             .style("opacity", 0);
 
           var node = svg
@@ -447,26 +448,18 @@
                     d.away_team_name +
                     "</br>" +
                     "Winning Team: " +
-                    d.winner
+                    d.winner +
+                    "</br>" +
+                    "Score: " +
+                    d.home_goals +
+                    " - " +
+                    d.away_goals
                 )
-                .style("left", d3.event.pageX + -300 + "px")
+                .style("left", d3.event.pageX - 400 + "px")
                 .style("top", d3.event.pageY + "px");
-
-              //working
-
-              // var tooltip = d3
-              //   .select("#nodeGraph")
-              //   .append("text")
-              //   .text(d.name)
-              //   .attr("x", d3.event.pageX - 300)
-              //   .attr("y", d3.event.pageY)
-              //   .attr("id", "tooltip");
             })
             .on("mouseout", function (d, i) {
               nodeTip.transition().duration("50").style("opacity", 0);
-
-              //working
-              // d3.select("#tooltip").remove();
             })
             .call(force.drag);
 
@@ -545,6 +538,36 @@
               return "translate(" + d.x + "," + d.y + ")";
             });
           });
+
+          var legend_nodes = svg
+            .selectAll(".legend")
+            .data([teamOneValue, teamTwoValue])
+            .enter()
+            .append("g")
+            .attr(
+              "transform",
+              (d, i) => `translate(${width - 300},${i * 20 + 20})`
+            );
+
+          legend_nodes
+            .append("image")
+            .attr("xlink:href", function (d) {
+              return "team_logos/" + d + ".png";
+            })
+            .attr("x", 0)
+            .attr("y", 0)
+            .attr("width", function (d) {
+              return 15;
+            })
+            .attr("height", function (d) {
+              return 15;
+            });
+
+          legend_nodes
+            .append("text")
+            .attr("x", 20)
+            .attr("y", 15)
+            .text((d) => d);
         }
 
         function main() {
