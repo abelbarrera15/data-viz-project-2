@@ -90,7 +90,7 @@
       <div class="col-sm-9" id="nodeHolder"></div>
     </div>
     <div class="row" id="details" style="display: none">
-      <a href="#" onclick="showNodeDiv();return false;" class="previous"
+      <a href="" onclick="showNodeDiv();return false;" class="previous"
         >&laquo; Go Back</a
       >
     </div>
@@ -145,6 +145,7 @@
         });
       }
 
+      //populate league's avilable in the form
       function makeForm() {
         var select = document.getElementById("selectLeague");
         var options = league_array;
@@ -161,6 +162,7 @@
         }
       }
 
+      //given a selected league, load the years they played
       function loadLeagueYears(input) {
         var btnValue = input.options[input.selectedIndex].value;
         let year_array = [];
@@ -196,6 +198,7 @@
         }
       }
 
+      //given a selected year and league, load the teams that played into the two drop downs
       function loadTeams(input) {
         var btnValue = input.options[input.selectedIndex].value;
         let team_array = [];
@@ -250,6 +253,7 @@
         }
       }
 
+      //construct the needed node/link object (node + relation to pass onto the create nodeGraph arg)
       function getNodeData() {
         let leagueElement = document.getElementById("selectLeague");
         let leagueValue =
@@ -372,10 +376,8 @@
         }
       }
 
+      //create the nodal graph
       function makeNodegraph(node_data) {
-        //to dos:
-        //add onclick hide div and show the other
-
         var width = document.getElementById("nodeHolder").clientWidth,
           height = window.innerHeight;
 
