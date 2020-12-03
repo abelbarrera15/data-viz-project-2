@@ -31,42 +31,41 @@
   <body>
     <div class="row">
       <div class="col-sm-3">
-      <div style="padding-top: 10px; padding-left: 10px">
-        <form id="nodeGraphForm" class="form">
-          <label for="selectLeague">Select a League:</label>
-          <br />
-          <select
-            id="selectLeague"
-            name="Select a League"
-            onchange="loadLeagueYears(this)"
-          ></select>
-          <br />
-          <label for="selectYear">Select a Year:</label>
-          <br />
-          <select
-            id="selectYear"
-            name="Select a Year"
-            onchange="loadTeams(this)"
-          ></select>
-          <br />
-          <label for="selectTeamOne">Select Team 1:</label>
-          <br />
-          <select id="selectTeamOne" name="Select Team 1"></select>
-          <br />
-          <label for="selectTeamTwo">Select Team 2:</label>
-          <br />
-          <select id="selectTeamTwo" name="Select Team 2"></select>
-          <br />
-          <div style="padding-top: 10px; padding-left: 50px">
-            <button type="button" onclick="getNodeData()">Submit</button>
-          </div>
-          <br />
-          Note: Select League then Year
-        </form>
+        <div style="padding-top: 10px; padding-left: 10px">
+          <form id="nodeGraphForm" class="form">
+            <label for="selectLeague">Select a League:</label>
+            <br />
+            <select
+              id="selectLeague"
+              name="Select a League"
+              onchange="loadLeagueYears(this)"
+            ></select>
+            <br />
+            <label for="selectYear">Select a Year:</label>
+            <br />
+            <select
+              id="selectYear"
+              name="Select a Year"
+              onchange="loadTeams(this)"
+            ></select>
+            <br />
+            <label for="selectTeamOne">Select Team 1:</label>
+            <br />
+            <select id="selectTeamOne" name="Select Team 1"></select>
+            <br />
+            <label for="selectTeamTwo">Select Team 2:</label>
+            <br />
+            <select id="selectTeamTwo" name="Select Team 2"></select>
+            <br />
+            <div style="padding-top: 10px; padding-left: 50px">
+              <button type="button" onclick="getNodeData()">Submit</button>
+            </div>
+            <br />
+            Note: Select League then Year
+          </form>
+        </div>
       </div>
-      </div>
-      <div class="col-sm-9" id ="nodeHolder"> </div>
-      </div>
+      <div class="col-sm-9" id="nodeHolder"></div>
       <script>
         //declare global vars
         let matchesJson;
@@ -331,14 +330,21 @@
         }
 
         function makeNodegraph(node_data) {
+          //note -- should I have two paths that move left to right?
+          //perhaps just add match # of the season per team :)
+          //need to fix when more than 2 go to the same node -- why is it happening?
+
           var width = document.getElementById("nodeHolder").clientWidth,
-            height = 800;
+            height = window.innerHeight;
 
           d3.select("#nodeGraph").remove();
 
           function zoom() {
             var zoom = d3.event;
-            svg.attr("transform", "translate(" + zoom.translate + ")scale(" + zoom.scale + ")");
+            svg.attr(
+              "transform",
+              "translate(" + zoom.translate + ")scale(" + zoom.scale + ")"
+            );
           }
 
           var svg = d3
@@ -386,11 +392,10 @@
           function dragstart(d) {
             d3.event.sourceEvent.preventDefault();
             d3.event.sourceEvent.stopPropagation();
-            d3.select(this).classed("fixed", d.fixed = true);
+            d3.select(this).classed("fixed", (d.fixed = true));
           }
 
-          var drag = force.drag()
-	          .on("dragstart", dragstart);
+          var drag = force.drag().on("dragstart", dragstart);
 
           var link = svg
             .selectAll(".link")
@@ -402,11 +407,11 @@
                 d.source.winner.toString() === teamOneValue ||
                 d.source.winner.toString() === teamTwoValue
               ) {
-                return "#939cc2";
+                return "#00008b";
               } else if (d.source.winner.toString() === "tie") {
                 return "#ccc";
               } else {
-                return "#a17724";
+                return "#ff0000";
               }
             })
             .attr("marker-end", "url(#arrowhead)");
@@ -426,8 +431,74 @@
             })
             .attr("x", -8)
             .attr("y", -8)
-            .attr("width", 35)
-            .attr("height", 35);
+            .attr("width", function (d) {
+              if (
+                (d.away_team_name.toString() === teamOneValue.toString() ||
+                  d.home_team_name.toString() === teamOneValue.toString()) &&
+                (d.away_team_name.toString() === teamTwoValue.toString() ||
+                  d.home_team_name.toString() === teamTwoValue.toString())
+              ) {
+                return 50;
+              } else {
+                return 35;
+              }
+            })
+            .attr("height", function (d) {
+              if (
+                (d.away_team_name.toString() === teamOneValue.toString() ||
+                  d.home_team_name.toString() === teamOneValue.toString()) &&
+                (d.away_team_name.toString() === teamTwoValue.toString() ||
+                  d.home_team_name.toString() === teamTwoValue.toString())
+              ) {
+                return 50;
+              } else {
+                return 35;
+              }
+            });
+
+          node
+            .append("rect")
+            .attr("class", "node")
+            .attr("x", -8)
+            .attr("y", -8)
+            .attr("width", function (d) {
+              if (
+                (d.away_team_name.toString() === teamOneValue.toString() ||
+                  d.home_team_name.toString() === teamOneValue.toString()) &&
+                (d.away_team_name.toString() === teamTwoValue.toString() ||
+                  d.home_team_name.toString() === teamTwoValue.toString())
+              ) {
+                return 50;
+              } else {
+                return 35;
+              }
+            })
+            .attr("height", function (d) {
+              if (
+                (d.away_team_name.toString() === teamOneValue.toString() ||
+                  d.home_team_name.toString() === teamOneValue.toString()) &&
+                (d.away_team_name.toString() === teamTwoValue.toString() ||
+                  d.home_team_name.toString() === teamTwoValue.toString())
+              ) {
+                return 50;
+              } else {
+                return 35;
+              }
+            })
+            .style("fill", "transparent")
+            .style("stroke", function (d) {
+              if (
+                (d.away_team_name.toString() === teamOneValue.toString() ||
+                  d.home_team_name.toString() === teamOneValue.toString()) &&
+                (d.away_team_name.toString() === teamTwoValue.toString() ||
+                  d.home_team_name.toString() === teamTwoValue.toString())
+              ) {
+                return "#ffdb58";
+              } else {
+                return "transparent";
+              }
+            })
+            .style("stroke-width", "3px");
 
           node
             .append("text")
