@@ -2,17 +2,23 @@
 <html lang="en">
   <meta charset="utf-8" />
   <style>
-    /* .link { */
-    /* stroke: #aaa; */
-    /* stroke: #ccc; */
-    /* stroke-width: 1.5px; */
-    /* } */
-
     .node {
       pointer-events: all;
       stroke: none;
       stroke-width: 40px;
       font: 10px sans-serif;
+    }
+
+    div.scatter-info {
+      position: absolute;
+      text-align: center;
+      padding: 0.5rem;
+      background: #ffffff;
+      color: #313639;
+      border: 1px solid #313639;
+      border-radius: 8px;
+      pointer-events: none;
+      font-size: 1.3rem;
     }
   </style>
   <head>
@@ -253,7 +259,7 @@
             alert("Please ensure teams selected are DIFFERENT teams");
           } else {
             let filtered_data = [];
-            let highest_stage; //q to self: how to handle when they play more than once in a season for other visual to pick up?
+            let highest_stage; //q to self: how to handle when they play more than once in a season for other visual to pick up? -- match id sending
             matchesJson.forEach(function (data) {
               if (
                 data.league_id.toString() === league_id.toString() &&
@@ -330,9 +336,10 @@
         }
 
         function makeNodegraph(node_data) {
-          //note -- should I have two paths that move left to right?
+          //to dos:
           //perhaps just add match # of the season per team :)
-          //need to fix when more than 2 go to the same node -- why is it happening?
+          //need to fix when more than 2 go to the same node -- why is it happening? -- probably the sort. Need to investigate
+          //add legend
 
           var width = document.getElementById("nodeHolder").clientWidth,
             height = window.innerHeight;
@@ -416,12 +423,51 @@
             })
             .attr("marker-end", "url(#arrowhead)");
 
+          var nodeTip = d3
+            .select("#nodeHolder")
+            .append("div")
+            .attr("class", "scatter-info")
+            .style("opacity", 0);
+
           var node = svg
             .selectAll(".node")
             .data(json.nodes)
             .enter()
             .append("g")
             .attr("class", "node")
+            .on("mouseover", function (d, i) {
+              nodeTip.transition().duration("50").attr("opacity", ".85");
+              nodeTip.transition().duration(50).style("opacity", "1");
+              nodeTip
+                .html(
+                  "Home Team: " +
+                    d.home_team_name +
+                    "</br>" +
+                    "Away Team Name: " +
+                    d.away_team_name +
+                    "</br>" +
+                    "Winning Team: " +
+                    d.winner
+                )
+                .style("left", d3.event.pageX + -300 + "px")
+                .style("top", d3.event.pageY + "px");
+
+              //working
+
+              // var tooltip = d3
+              //   .select("#nodeGraph")
+              //   .append("text")
+              //   .text(d.name)
+              //   .attr("x", d3.event.pageX - 300)
+              //   .attr("y", d3.event.pageY)
+              //   .attr("id", "tooltip");
+            })
+            .on("mouseout", function (d, i) {
+              nodeTip.transition().duration("50").style("opacity", 0);
+
+              //working
+              // d3.select("#tooltip").remove();
+            })
             .call(force.drag);
 
           node
@@ -432,28 +478,10 @@
             .attr("x", -8)
             .attr("y", -8)
             .attr("width", function (d) {
-              if (
-                (d.away_team_name.toString() === teamOneValue.toString() ||
-                  d.home_team_name.toString() === teamOneValue.toString()) &&
-                (d.away_team_name.toString() === teamTwoValue.toString() ||
-                  d.home_team_name.toString() === teamTwoValue.toString())
-              ) {
-                return 50;
-              } else {
-                return 35;
-              }
+              return 35;
             })
             .attr("height", function (d) {
-              if (
-                (d.away_team_name.toString() === teamOneValue.toString() ||
-                  d.home_team_name.toString() === teamOneValue.toString()) &&
-                (d.away_team_name.toString() === teamTwoValue.toString() ||
-                  d.home_team_name.toString() === teamTwoValue.toString())
-              ) {
-                return 50;
-              } else {
-                return 35;
-              }
+              return 35;
             });
 
           node
@@ -462,28 +490,10 @@
             .attr("x", -8)
             .attr("y", -8)
             .attr("width", function (d) {
-              if (
-                (d.away_team_name.toString() === teamOneValue.toString() ||
-                  d.home_team_name.toString() === teamOneValue.toString()) &&
-                (d.away_team_name.toString() === teamTwoValue.toString() ||
-                  d.home_team_name.toString() === teamTwoValue.toString())
-              ) {
-                return 50;
-              } else {
-                return 35;
-              }
+              return 35;
             })
             .attr("height", function (d) {
-              if (
-                (d.away_team_name.toString() === teamOneValue.toString() ||
-                  d.home_team_name.toString() === teamOneValue.toString()) &&
-                (d.away_team_name.toString() === teamTwoValue.toString() ||
-                  d.home_team_name.toString() === teamTwoValue.toString())
-              ) {
-                return 50;
-              } else {
-                return 35;
-              }
+              return 35;
             })
             .style("fill", "transparent")
             .style("stroke", function (d) {
@@ -518,16 +528,16 @@
               })
               .attr("x2", function (d) {
                 if (d.source.x < d.target.x) {
-                  return d.target.x - 2;
+                  return d.target.x - 5;
                 } else {
-                  return d.target.x + 2;
+                  return d.target.x + 5;
                 }
               })
               .attr("y2", function (d) {
                 if (d.source.y < d.target.y) {
-                  return d.target.y - 2;
+                  return d.target.y - 5;
                 } else {
-                  return d.target.y + 2;
+                  return d.target.y + 5;
                 }
               });
 
