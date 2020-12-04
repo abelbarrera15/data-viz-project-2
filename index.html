@@ -117,6 +117,8 @@
       let pyodideReady = 0;
       let current_url = window.location.href;
 
+      console.log(current_url);
+
       function getBaseData() {
         //reading the data
 
@@ -711,16 +713,20 @@
         from math import pi
         import io
         import base64
+        import pyodide
 
-        match = pd.read_json(` +
-            pyodide.open_url(+current_url + "/data/match.json") +
-            `)
-        team = pd.read_csv(` +
-            pyodide.open_url(current_url + "/data/team.csv") +
-            `)
-        team_attr = pd.read_csv(` +
-            pyodide.open_url(current_url + "/data/team_attr.csv") +
-            `)
+        match = pd.read_json(pyodide.open_url('` +
+            +"http://localhost:5500/" +
+            "data/match.json" +
+            `'))
+        team = pd.read_csv(pyodide.open_url('` +
+            "http://localhost:5500/" +
+            "data/team.csv" +
+            `'))
+        team_attr = pd.read_csv(pyodide.open_url('` +
+            "http://localhost:5500/" +
+            "data/team_attr.csv" +
+            `'))
         team_attr = pd.merge(team_attr, team, left_on='team_api_id',
                             right_on='team_api_id')
 
