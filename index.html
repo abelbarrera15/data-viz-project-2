@@ -50,6 +50,10 @@
     <!-- Latest compiled d3 v3 -->
     <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
     <!-- Pyodide Library v0.15.0 -->
+    <script type="text/javascript">
+      // set the pyodide files URL (packages.json, pyodide.asm.data etc)
+      window.languagePluginUrl = "https://pyodide-cdn2.iodide.io/v0.15.0/full/";
+    </script>
     <script src="https://pyodide-cdn2.iodide.io/v0.15.0/full/pyodide.js"></script>
   </head>
   <body>
@@ -96,7 +100,6 @@
         >&laquo; Go Back</a
       >
       <div id="statvisuals">
-        <div id="msg" class="processing">Preparing your visualization...</div>
         <div id="pyplotdiv"><img id="pyplotfigure" /></div>
       </div>
     </div>
@@ -105,12 +108,14 @@
       let matchesJson;
       let teamCsv;
       let leaguesCsv;
+      let team_attrCsv;
       let league_array = [];
       let league_id;
       let teamOneValue;
       let teamTwoValue;
       let origDisplayStyle = undefined;
       let pyodideReady = 0;
+      let current_url = window.location.href;
 
       function getBaseData() {
         //reading the data
@@ -126,6 +131,7 @@
           matchesJson = resolve[0];
           teamCsv = resolve[1];
           leaguesCsv = resolve[2];
+
           let matchesJson_new = [];
           matchesJson.forEach(function (data) {
             let home_t;
@@ -149,6 +155,7 @@
 
           matchesJson = matchesJson_new;
           makeForm();
+          loadPythonLibs();
         });
       }
 
@@ -685,15 +692,85 @@
         var statsElemen = document.getElementById("details");
         statsElemen.style.display = origDisplayStyle;
 
-        pyodide.runPython(`
-                import matplotlib.pyplot as plt
-                import io, base64
-                fig, ax = plt.subplots()
-                ax.plot([1,3,2])
-                buf = io.BytesIO()
-                fig.savefig(buf, format='png')
-                buf.seek(0)
-                img_str = 'data:image/png;base64,' + base64.b64encode(buf.read()).decode('UTF-8')`);
+        // pyodide.runPython(`
+        //         import matplotlib.pyplot as plt
+        //         import io, base64
+        //         fig, ax = plt.subplots()
+        //         ax.plot([1,3,2])
+        //         buf = io.BytesIO()
+        //         fig.savefig(buf, format='png')
+        //         buf.seek(0)
+        //         img_str = 'data:image/png;base64,' + base64.b64encode(buf.read()).decode('UTF-8')`);
+
+        pyodide.o;
+
+        pyodide.runPython(
+          `
+        import pandas as pd
+        import matplotlib.pyplot as plt
+        from math import pi
+        import io
+        import base64
+
+        match = pd.read_json(` +
+            pyodide.open_url(+current_url + "/data/match.json") +
+            `)
+        team = pd.read_csv(` +
+            pyodide.open_url(current_url + "/data/team.csv") +
+            `)
+        team_attr = pd.read_csv(` +
+            pyodide.open_url(current_url + "/data/team_attr.csv") +
+            `)
+        team_attr = pd.merge(team_attr, team, left_on='team_api_id',
+                            right_on='team_api_id')
+
+
+        def match_viz(match_select):
+            spec_match = match[match['match_api_id'] == match_select]
+            home = spec_match['home_team_api_id']
+            away = spec_match['away_team_api_id']
+            home_attr = team_attr[team_attr['team_api_id'] == home.item()]
+            home_attr = home_attr.head(1)
+            away_attr = team_attr[team_attr['team_api_id'] == away.item()]
+            away_attr = away_attr.head(1)
+            f_s_attr = home_attr.append(away_attr)
+            f_s_attr1 = f_s_attr[['buildUpPlaySpeed', 'buildUpPlayPassing',
+                                  'chanceCreationPassing', 'chanceCreationShooting', 'chanceCreationCrossing',
+                                  'defencePressure', 'defenceAggression', 'defenceTeamWidth']]
+            f_s_attr1 = f_s_attr1.set_index(f_s_attr['team_long_name'])
+            N = len(f_s_attr1.columns)
+            angles = [n / float(N) * 2 * pi for n in range(N)]
+            angles += angles[:1]
+            ax = plt.subplot(111, polar=True)
+            ax.set_theta_offset(pi / 2)
+            ax.set_theta_direction(-1)
+            plt.xticks(angles[:-1], f_s_attr1.columns)
+            ax.set_rlabel_position(0)
+            plt.yticks([10, 20, 30, 40, 50, 60, 70], ["10", "20", "30",
+                                                      "40", "50", "60", "70"], color="grey", size=7)
+            plt.ylim(0, 75)
+            values = f_s_attr1.loc[f_s_attr1.index[0]].values.flatten().tolist()
+            values += values[:1]
+            ax.plot(angles, values, linewidth=1,
+                    linestyle='solid', label=f_s_attr1.index[0])
+            ax.fill(angles, values, 'b', alpha=0.1)
+            values = f_s_attr1.loc[f_s_attr1.index[1]].values.flatten().tolist()
+            values += values[:1]
+            ax.plot(angles, values, linewidth=1,
+                    linestyle='solid', label=f_s_attr1.index[1])
+            ax.fill(angles, values, 'r', alpha=0.1)
+            buf = io.BytesIO()
+            plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
+            buf = io.BytesIO()
+            plt.savefig(buf,format='png')
+            buf.seek(0)
+            img_str = 'data:image/png;base64,' + base64.b64encode(buf.read()).decode('UTF-8')
+
+
+        match_viz(` +
+            match_id +
+            ")"
+        );
 
         document.getElementById("pyplotfigure").src = pyodide.globals.img_str;
       }
@@ -710,13 +787,17 @@
         languagePluginLoader.then(() => {
           pyodide.loadPackage(["matplotlib", "pandas"]).then(() => {
             pyodideReady = 1;
+            // fetch("data/match.json").then((response) => (matchRaw = response));
+            // fetch("data/team_attr.csv").then(
+            //   (response) => (teamAttrRaw = response)
+            // );
+            // fetch("data/team.csv").then((response) => (teamRaw = response));
           });
         });
       }
 
       function main() {
         getBaseData();
-        loadPythonLibs();
       }
 
       main();
