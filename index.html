@@ -684,6 +684,7 @@
       function loadMatchStats(match_id) {
         var statsElemen = document.getElementById("details");
         statsElemen.style.display = origDisplayStyle;
+
         pyodide.runPython(`
                 import matplotlib.pyplot as plt
                 import io, base64
@@ -707,7 +708,7 @@
 
       function loadPythonLibs() {
         languagePluginLoader.then(() => {
-          pyodide.loadPackage(["matplotlib"]).then(() => {
+          pyodide.loadPackage(["matplotlib", "pandas"]).then(() => {
             pyodideReady = 1;
           });
         });
