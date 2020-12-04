@@ -699,6 +699,7 @@
           .text((d) => d);
       }
 
+      //load the stats div and disspear the node div
       function loadMatchStats(match_id) {
         var statsElemen = document.getElementById("details");
         statsElemen.style.display = origDisplayStyle;
@@ -815,6 +816,8 @@
         import io
         import base64
 
+        # VISUAL ONE
+
         try:
           plt.show()
           plt.close("all")
@@ -855,7 +858,6 @@
         for iter in temp_team_attr:
             filtered_team_attr_rows.append(iter.split(';'))
 
-        # VISUAL ONE
         match = pd.DataFrame(filtered_match_rows, columns = filtered_match_cols)
         match['match_api_id'] = match['match_api_id'].astype(int)
 
@@ -1037,6 +1039,11 @@
                 "We don't have enough data to make this visual, please go back and select another node."
               );
             }
+          })
+          .catch((err) => {
+            alert(
+              "We don't have enough data to make this visual, please go back and select another node."
+            );
           });
       }
 
