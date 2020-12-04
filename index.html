@@ -749,6 +749,36 @@
         import base64
         import pyodide
 
+        try:
+          del match_id
+          del filtered_match_cols
+          del filtered_match_rows
+          del match
+          del team
+          del team_attr
+          del img_str
+          del match_select
+          del spec_match
+          del home
+          del away
+          del home_attr
+          del f_s_attr
+          del f_s_attr1
+          del N
+          del angles
+          del ax
+          del values
+          del buf
+          del img_str
+          ax.cla()
+          plt.clf()
+          plt.clear()
+          ax.clear()
+          plt.cla()
+          ax.clf()
+        except Exception:
+          print('keep going')
+
         match_id = ` +
               match_id +
               `
