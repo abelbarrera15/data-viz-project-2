@@ -750,6 +750,8 @@
         import pyodide
 
         try:
+          plt.show()
+          plt.close("all")
           del match_id
           del filtered_match_cols
           del filtered_match_rows
@@ -770,12 +772,6 @@
           del values
           del buf
           del img_str
-          ax.cla()
-          plt.clf()
-          plt.clear()
-          ax.clear()
-          plt.cla()
-          ax.clf()
         except Exception:
           print('keep going')
 
