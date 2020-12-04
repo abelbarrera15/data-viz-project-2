@@ -117,8 +117,6 @@
       let pyodideReady = 0;
       let current_url = window.location.href;
 
-      console.log(current_url);
-
       function getBaseData() {
         //reading the data
 
@@ -389,6 +387,7 @@
             }
           }
           makeNodegraph(temp_obj);
+          // console.log(filtered_data);
         }
       }
 
@@ -704,8 +703,6 @@
         //         buf.seek(0)
         //         img_str = 'data:image/png;base64,' + base64.b64encode(buf.read()).decode('UTF-8')`);
 
-        pyodide.o;
-
         pyodide.runPython(
           `
         import pandas as pd
@@ -715,18 +712,9 @@
         import base64
         import pyodide
 
-        match = pd.read_json(pyodide.open_url('` +
-            +"http://localhost:5500/" +
-            "data/match.json" +
-            `'))
-        team = pd.read_csv(pyodide.open_url('` +
-            "http://localhost:5500/" +
-            "data/team.csv" +
-            `'))
-        team_attr = pd.read_csv(pyodide.open_url('` +
-            "http://localhost:5500/" +
-            "data/team_attr.csv" +
-            `'))
+        match = pd.read_json(pyodide.open_url("http://localhost:5500/data/match.json"))
+        team = pd.read_csv(pyodide.open_url("http://localhost:5500/data/team.csv"))
+        team_attr = pd.read_csv(pyodide.open_url("http://localhost:5500/data/team_attr.csv"))
         team_attr = pd.merge(team_attr, team, left_on='team_api_id',
                             right_on='team_api_id')
 
