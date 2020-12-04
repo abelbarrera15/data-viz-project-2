@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+  <meta charset="utf-8" />
+  <style>
+    .node {
+      pointer-events: all;
+      stroke: none;
+      stroke-width: 40px;
+      font: 10px sans-serif;
+    }
+
+    div.node-info {
+      position: absolute;
+      text-align: center;
+      padding: 0.5rem;
+      background: #ffffff;
+      color: #313639;
+      border: 1px solid #313639;
+      border-radius: 8px;
+      pointer-events: none;
+      font-size: 1.3rem;
+    }
+
+    a {
+      text-decoration: none;
+      display: inline-block;
+      padding: 8px 16px;
+    }
+
+    a:hover {
+      background-color: #ddd;
+      color: black;
+    }
+
+    .previous {
+      background-color: #4caf50;
+      color: black;
+    }
+  </style>
+  <head>
+    <!-- Latest compiled CSS v3.4.1 -->
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
+    />
+    <!-- jQuery library v3.5.1-->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <!-- Latest compiled JavaScript v3.4.1 -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <!-- Latest compiled d3 v3 -->
+    <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <!-- Pyodide Library v0.15.0 -->
+    <script type="text/javascript">
+      // set the pyodide files URL (packages.json, pyodide.asm.data etc)
+      window.languagePluginUrl = "https://pyodide-cdn2.iodide.io/v0.15.0/full/";
+    </script>
+    <script src="https://pyodide-cdn2.iodide.io/v0.15.0/full/pyodide.js"></script>
+    <!-- Lodash Library v4.17.10 -->
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.10/lodash.min.js"></script>
+  </head>
+  <body>
+    <div class="row" id="overview">
+      <div class="col-sm-3">
+        <div style="padding-top: 10px; padding-left: 10px">
+          <form id="nodeGraphForm" class="form">
+            <label for="selectLeague">Select a League:</label>
+            <br />
+            <select
+              id="selectLeague"
+              name="Select a League"
+              onchange="loadLeagueYears(this)"
+            ></select>
+            <br />
+            <label for="selectYear">Select a Year:</label>
+            <br />
+            <select
+              id="selectYear"
+              name="Select a Year"
+              onchange="loadTeams(this)"
+            ></select>
+            <br />
+            <label for="selectTeamOne">Select Team 1:</label>
+            <br />
+            <select id="selectTeamOne" name="Select Team 1"></select>
+            <br />
+            <label for="selectTeamTwo">Select Team 2:</label>
+            <br />
+            <select id="selectTeamTwo" name="Select Team 2"></select>
+            <br />
+            <div style="padding-top: 10px; padding-left: 50px">
+              <button type="button" onclick="getNodeData()">Submit</button>
+            </div>
+            <br />
+            Note: Select League then Year
+          </form>
+        </div>
+      </div>
+      <div class="col-sm-9" id="nodeHolder"></div>
+    </div>
+    <div class="row" id="details" style="display: none">
+      <a href="" onclick="showNodeDiv();return false;" class="previous"
+        >&laquo; Go Back</a
+      >
+      <div id="statvisuals">
+        <div id="pyplotdiv"><img id="pyplotfigure" /></div>
+        <div id="pandasdiv"><img id="pandasfigure" /></div>
+      </div>
+    </div>
+    <script>
+      //declare global vars
+      let matchesJson;
+      let teamCsv;
+      let teamAttrCsv;
+      let leaguesCsv;
+      let playerCsv;
+      let playerAttrCsv;
+      let league_array = [];
+      let league_id;
+      let teamOneValue;
+      let teamTwoValue;
+      let origDisplayStyle = undefined;
+      let pyodideReady = 0;
+      let current_url = window.location.href;
+
+      function getBaseData() {
+        //reading the data
+
+        var PromiseWrapper = (xhr, d) =>
+          new Promise((resolve) => xhr(d, (p) => resolve(p)));
+
+        Promise.all([
+          PromiseWrapper(d3.json, "data/match.json"),
+          PromiseWrapper(d3.csv, "data/team.csv"),
+          PromiseWrapper(d3.csv, "data/league.csv"),
+          PromiseWrapper(d3.csv, "data/player.csv"),
+          PromiseWrapper(d3.csv, "data/player_attr.csv"),
+          PromiseWrapper(d3.csv, "data/team_attr.csv"),
+        ]).then((resolve) => {
+          matchesJson = resolve[0];
+          teamCsv = resolve[1];
+          leaguesCsv = resolve[2];
+          playerCsv = resolve[3];
+          playerAttrCsv = resolve[4];
+          teamAttrCsv = resolve[5];
+
+          let matchesJson_new = [];
+          matchesJson.forEach(function (data) {
+            let home_t;
+            let away_t;
+            teamCsv.forEach(function (team_data) {
+              if (team_data.team_api_id == data.home_team_api_id) {
+                home_t = team_data.team_long_name;
+              } else if (team_data.team_api_id == data.away_team_api_id) {
+                away_t = team_data.team_long_name;
+              }
+            });
+            let temp_data = data;
+            temp_data["home_team_name"] = home_t;
+            temp_data["away_team_name"] = away_t;
+            temp_data["match_name"] = home_t + away_t;
+            matchesJson_new.push(temp_data);
+          });
+          leaguesCsv.forEach(function (data) {
+            league_array.push(data.name);
+          });
+
+          matchesJson = matchesJson_new;
+          makeForm();
+          loadPythonLibs();
+        });
+      }
+
+      //populate league's availble in the form
+      function makeForm() {
+        var select = document.getElementById("selectLeague");
+        var options = league_array;
+        var el = document.createElement("option");
+        el.textContent = "";
+        el.value = "";
+        select.appendChild(el);
+        for (var i = 0; i < options.length; i++) {
+          var opt = options[i];
+          var el = document.createElement("option");
+          el.textContent = opt;
+          el.value = opt;
+          select.appendChild(el);
+        }
+      }
+
+      //given a selected league, load the years they played
+      function loadLeagueYears(input) {
+        var btnValue = input.options[input.selectedIndex].value;
+        let year_array = [];
+        leaguesCsv.forEach(function (data) {
+          if (data.name === btnValue) {
+            league_id = data.id;
+          }
+        });
+
+        matchesJson.forEach(function (data) {
+          if (data.league_id.toString() === league_id.toString()) {
+            if (year_array.includes(data.season) === false) {
+              year_array.push(data.season);
+            }
+          }
+        });
+
+        var select = document.getElementById("selectYear");
+        while (select.options.length > 0) {
+          select.remove(0);
+        }
+        var options = year_array;
+        var el = document.createElement("option");
+        el.textContent = "";
+        el.value = "";
+        select.appendChild(el);
+        for (var i = 0; i < options.length; i++) {
+          var opt = options[i];
+          var el = document.createElement("option");
+          el.textContent = opt;
+          el.value = opt;
+          select.appendChild(el);
+        }
+      }
+
+      //given a selected year and league, load the teams that played into the two drop downs
+      function loadTeams(input) {
+        var btnValue = input.options[input.selectedIndex].value;
+        let team_array = [];
+        matchesJson.forEach(function (data) {
+          if (
+            data.season.toString() === btnValue.toString() &&
+            data.league_id.toString() === league_id.toString()
+          ) {
+            if (team_array.includes(data.home_team_name) === false) {
+              team_array.push(data.home_team_name);
+            }
+            if (team_array.includes(data.away_team_name) === false) {
+              team_array.push(data.away_team_name);
+            }
+          }
+        });
+
+        team_array.sort();
+
+        var select = document.getElementById("selectTeamOne");
+        while (select.options.length > 0) {
+          select.remove(0);
+        }
+        var options = team_array;
+        var el = document.createElement("option");
+        el.textContent = "";
+        el.value = "";
+        select.appendChild(el);
+        for (var i = 0; i < options.length; i++) {
+          var opt = options[i];
+          var el = document.createElement("option");
+          el.textContent = opt;
+          el.value = opt;
+          select.appendChild(el);
+        }
+
+        var select = document.getElementById("selectTeamTwo");
+        while (select.options.length > 0) {
+          select.remove(0);
+        }
+        var options = team_array;
+        var el = document.createElement("option");
+        el.textContent = "";
+        el.value = "";
+        select.appendChild(el);
+        for (var i = 0; i < options.length; i++) {
+          var opt = options[i];
+          var el = document.createElement("option");
+          el.textContent = opt;
+          el.value = opt;
+          select.appendChild(el);
+        }
+      }
+
+      //construct the needed node/link object (node + relation to pass onto the create nodeGraph arg)
+      function getNodeData() {
+        let leagueElement = document.getElementById("selectLeague");
+        let leagueValue =
+          leagueElement.options[leagueElement.selectedIndex].value;
+        let yearValue;
+        let yearElement;
+        let teamOneElement;
+        let teamTwoElement;
+        try {
+          yearElement = document.getElementById("selectYear");
+          yearValue = yearElement.options[yearElement.selectedIndex].value;
+          teamOneElement = document.getElementById("selectTeamOne");
+          teamOneValue =
+            teamOneElement.options[teamOneElement.selectedIndex].value;
+          teamTwoElement = document.getElementById("selectTeamTwo");
+          teamTwoValue =
+            teamTwoElement.options[teamTwoElement.selectedIndex].value;
+        } catch (err) {
+          alert("Please select BOTH a year and a league");
+          return;
+        }
+
+        if (leagueValue === "" || yearValue === "") {
+          alert("Please select BOTH a year and a league");
+          return;
+        } else if (teamOneValue === "" || teamTwoValue === "") {
+          alert("Please select TWO teams");
+          return;
+        } else if (teamOneValue === teamTwoValue) {
+          alert("Please ensure teams selected are DIFFERENT teams");
+        } else {
+          let filtered_data = [];
+          let highest_stage;
+          matchesJson.forEach(function (data) {
+            if (
+              data.league_id.toString() === league_id.toString() &&
+              data.season.toString() === yearValue.toString() &&
+              (data.away_team_name.toString() === teamOneValue.toString() ||
+                data.away_team_name.toString() === teamTwoValue.toString() ||
+                data.home_team_name.toString() === teamOneValue.toString() ||
+                data.home_team_name.toString() === teamTwoValue.toString())
+            ) {
+              if (highest_stage === undefined) {
+                highest_stage = data.stage;
+              } else if (highest_stage < data.stage) {
+                highest_stage = data.stage;
+              }
+              filtered_data.push(data);
+            }
+          });
+          filtered_data.sort((a, b) =>
+            a.date > b.date
+              ? 1
+              : a.date === b.date
+              ? a.date > b.date
+                ? 1
+                : -1
+              : -1
+          );
+          let temp_obj = { nodes: [], links: [] };
+          for (var y = 0; y < filtered_data.length; y++) {
+            let destinations = 0;
+            let winner_name;
+            if (
+              filtered_data[y].home_team_goal > filtered_data[y].away_team_goal
+            ) {
+              winner_name = filtered_data[y].home_team_name;
+            } else if (
+              filtered_data[y].home_team_goal < filtered_data[y].away_team_goal
+            ) {
+              winner_name = filtered_data[y].away_team_name;
+            } else {
+              winner_name = "tie";
+            }
+            temp_obj.nodes.push({
+              name: filtered_data[y].match_name,
+              home_team_name: filtered_data[y].home_team_name,
+              away_team_name: filtered_data[y].away_team_name,
+              winner: winner_name,
+              home_goals: filtered_data[y].home_team_goal,
+              away_goals: filtered_data[y].away_team_goal,
+              match_id: filtered_data[y].match_api_id,
+            });
+            let indexer = y + 1;
+            while (indexer < filtered_data.length) {
+              let numLinks = 1;
+              if (
+                (filtered_data[y].home_team_name.toString() ===
+                  teamOneValue.toString() &&
+                  filtered_data[y].away_team_name.toString() ===
+                    teamTwoValue.toString()) ||
+                (filtered_data[y].home_team_name.toString() ===
+                  teamTwoValue.toString() &&
+                  filtered_data[y].away_team_name.toString() ===
+                    teamOneValue.toString())
+              ) {
+                numLinks = 2;
+              }
+              if (destinations === numLinks || y + 1 === highest_stage) {
+                break;
+              } else {
+                if (
+                  filtered_data[y].home_team_api_id.toString() ===
+                    filtered_data[indexer].home_team_api_id.toString() ||
+                  filtered_data[y].home_team_api_id.toString() ===
+                    filtered_data[indexer].away_team_api_id.toString() ||
+                  filtered_data[y].away_team_api_id.toString() ===
+                    filtered_data[indexer].home_team_api_id.toString() ||
+                  filtered_data[y].away_team_api_id.toString() ===
+                    filtered_data[indexer].away_team_api_id.toString()
+                ) {
+                  temp_obj.links.push({ source: y, target: indexer });
+                  destinations++;
+                }
+                indexer++;
+              }
+            }
+          }
+          makeNodegraph(temp_obj);
+        }
+      }
+
+      //create the nodal graph
+      function makeNodegraph(node_data) {
+        var width = document.getElementById("nodeHolder").clientWidth,
+          height = window.innerHeight;
+
+        d3.select("#nodeGraph").remove();
+
+        function zoom() {
+          var zoom = d3.event;
+          svg.attr(
+            "transform",
+            "translate(" + zoom.translate + ")scale(" + zoom.scale + ")"
+          );
+        }
+
+        var svg = d3
+          .select("#nodeHolder")
+          .append("svg")
+          .attr("width", width)
+          .attr("height", height)
+          .attr("id", "nodeGraph")
+          .call(d3.behavior.zoom().scaleExtent([1, 8]).on("zoom", zoom))
+          .on("dblclick.zoom", null)
+          .append("g")
+          .call(d3.behavior.zoom().scaleExtent([1, 8]).on("zoom", zoom))
+          .on("dblclick.zoom", null)
+          .append("g");
+
+        svg
+          .append("svg:defs")
+          .selectAll("marker")
+          .data(["end"])
+          .enter()
+          .append("svg:marker")
+          .attr("id", "arrowhead")
+          .attr("viewBox", "-0 -5 10 10")
+          .attr("refX", 13)
+          .attr("refY", 0)
+          .attr("orient", "auto")
+          .attr("markerWidth", 8)
+          .attr("markerHeight", 8)
+          .attr("xoverflow", "visible")
+          .append("svg:path")
+          .attr("d", "M 0,-5 L 10 ,0 L 0,5")
+          .attr("fill", "#999")
+          .style("stroke", "none");
+
+        var json = node_data;
+
+        var force = d3.layout
+          .force()
+          .gravity(0.05)
+          .distance(100)
+          .charge(-100)
+          .size([width, height])
+          .nodes(json.nodes)
+          .links(json.links)
+          .start();
+
+        function dragstart(d) {
+          d3.event.sourceEvent.preventDefault();
+          d3.event.sourceEvent.stopPropagation();
+          d3.select(this).classed("fixed", (d.fixed = true));
+        }
+
+        var drag = force.drag().on("dragstart", dragstart);
+
+        var link = svg
+          .selectAll(".link")
+          .data(json.links)
+          .enter()
+          .append("line")
+          .attr("stroke", function (d) {
+            if (
+              d.source.winner.toString() === teamOneValue ||
+              d.source.winner.toString() === teamTwoValue
+            ) {
+              return "#00008b";
+            } else if (d.source.winner.toString() === "tie") {
+              return "#ccc";
+            } else {
+              return "#ff0000";
+            }
+          })
+          .attr("marker-end", "url(#arrowhead)");
+
+        var nodeTip = d3
+          .select("#nodeHolder")
+          .append("div")
+          .attr("class", "node-info")
+          .style("opacity", 0);
+
+        var node = svg
+          .selectAll(".node")
+          .data(json.nodes)
+          .enter()
+          .append("g")
+          .attr("class", "node")
+          .on("mouseover", function (d, i) {
+            nodeTip.transition().duration("50").attr("opacity", ".85");
+            nodeTip.transition().duration(50).style("opacity", "1");
+            nodeTip
+              .html(
+                "Home Team: " +
+                  d.home_team_name +
+                  "</br>" +
+                  "Away Team: " +
+                  d.away_team_name +
+                  "</br>" +
+                  "Winning Team: " +
+                  d.winner +
+                  "</br>" +
+                  "Score: " +
+                  d.home_goals +
+                  " - " +
+                  d.away_goals
+              )
+              .style("left", d3.event.pageX - 400 + "px")
+              .style("top", d3.event.pageY + "px");
+          })
+          .on("mouseout", function (d, i) {
+            nodeTip.transition().duration("50").style("opacity", 0);
+          })
+          .on("dblclick", function (d, i) {
+            var mainElemen = document.getElementById("overview");
+            if (origDisplayStyle === undefined) {
+              origDisplayStyle = mainElemen.style.display;
+            }
+            mainElemen.style.display = "none";
+            loadMatchStats(d.match_id);
+          })
+          .call(force.drag);
+
+        node
+          .append("image")
+          .attr("xlink:href", function (d) {
+            return "match_banners/" + d.name + ".png";
+          })
+          .attr("x", -8)
+          .attr("y", -8)
+          .attr("width", function (d) {
+            return 35;
+          })
+          .attr("height", function (d) {
+            return 35;
+          });
+
+        node
+          .append("rect")
+          .attr("class", "node")
+          .attr("x", -8)
+          .attr("y", -8)
+          .attr("width", function (d) {
+            return 35;
+          })
+          .attr("height", function (d) {
+            return 35;
+          })
+          .style("fill", "transparent")
+          .style("stroke", function (d) {
+            if (
+              (d.away_team_name.toString() === teamOneValue.toString() ||
+                d.home_team_name.toString() === teamOneValue.toString()) &&
+              (d.away_team_name.toString() === teamTwoValue.toString() ||
+                d.home_team_name.toString() === teamTwoValue.toString())
+            ) {
+              return "#ffdb58";
+            } else {
+              return "transparent";
+            }
+          })
+          .style("stroke-width", "3px");
+
+        force.on("tick", function () {
+          link
+            .attr("x1", function (d) {
+              return d.source.x;
+            })
+            .attr("y1", function (d) {
+              return d.source.y;
+            })
+            .attr("x2", function (d) {
+              if (d.source.x < d.target.x) {
+                return d.target.x - 5;
+              } else {
+                return d.target.x + 5;
+              }
+            })
+            .attr("y2", function (d) {
+              if (d.source.y < d.target.y) {
+                return d.target.y - 5;
+              } else {
+                return d.target.y + 5;
+              }
+            });
+
+          node.attr("transform", function (d) {
+            return "translate(" + d.x + "," + d.y + ")";
+          });
+        });
+
+        var legend_header = svg
+          .selectAll(".legend")
+          .data(["Legend"])
+          .enter()
+          .append("g")
+          .attr(
+            "transform",
+            (d, i) => `translate(${width - 300},${i * 20 + 10})`
+          );
+
+        legend_header
+          .append("text")
+          .attr("font-weight", 700)
+          .attr("font-size", 20)
+          .attr("x", 0)
+          .attr("y", 15)
+          .text((d) => d);
+
+        var legend_nodes = svg
+          .selectAll(".legend")
+          .data([teamOneValue, teamTwoValue])
+          .enter()
+          .append("g")
+          .attr(
+            "transform",
+            (d, i) => `translate(${width - 300},${i * 20 + 40})`
+          );
+
+        legend_nodes
+          .append("image")
+          .attr("xlink:href", function (d) {
+            return "team_logos/" + d + ".png";
+          })
+          .attr("x", 0)
+          .attr("y", 0)
+          .attr("width", function (d) {
+            return 15;
+          })
+          .attr("height", function (d) {
+            return 15;
+          });
+
+        legend_nodes
+          .append("text")
+          .attr("x", 20)
+          .attr("y", 15)
+          .text((d) => d);
+
+        var legend_links = svg
+          .selectAll(".legend")
+          .data(["win", "loss", "tie"])
+          .enter()
+          .append("g")
+          .attr(
+            "transform",
+            (d, i) => `translate(${width - 300},${i * 20 + 90})`
+          );
+
+        legend_links
+          .append("svg:defs")
+          .append("svg:marker")
+          .attr("id", "triangle")
+          .attr("refX", 6)
+          .attr("refY", 6)
+          .attr("markerWidth", 30)
+          .attr("markerHeight", 30)
+          .attr("orient", "auto")
+          .append("path")
+          .attr("d", "M 0 0 12 6 0 12 3 6")
+          .attr("fill", "#999")
+          .style("stroke", "none");
+
+        legend_links
+          .append("line")
+          .attr("x1", 0)
+          .attr("y1", 0)
+          .attr("x2", 50)
+          .attr("y2", 0)
+          .attr("stroke-width", 1)
+          .attr("stroke", function (d) {
+            if (d === "win") {
+              return "#00008b";
+            } else if (d === "loss") {
+              return "#ff0000";
+            } else {
+              return "#ccc";
+            }
+          })
+          .attr("marker-end", "url(#triangle)");
+
+        legend_links
+          .append("text")
+          .attr("x", 60)
+          .attr("y", 3)
+          .text((d) => d);
+      }
+
+      //load the stats div and disspear the node div
+      function loadMatchStats(match_id) {
+        var statsElemen = document.getElementById("details");
+        statsElemen.style.display = origDisplayStyle;
+        let matchesCols = undefined;
+        let matchesRows;
+        let player_array;
+        let htn;
+        let atn;
+        let htn_api_id;
+        let atn_api_id;
+        matchesJson.forEach(function (data) {
+          if (data.match_api_id.toString() === match_id.toString()) {
+            htn = data.home_team_name;
+            atn = data.away_team_name;
+            htn_api_id = data.home_team_api_id;
+            atn_api_id = data.away_team_api_id;
+            matchesCols = Object.keys(data).join(";");
+            matchesRows = Object.values(data).join(";");
+            player_array = Object.values(
+              _.pick(data, [
+                "home_player_1",
+                "home_player_2",
+                "home_player_3",
+                "home_player_4",
+                "home_player_5",
+                "home_player_6",
+                "home_player_7",
+                "home_player_8",
+                "home_player_9",
+                "home_player_10",
+                "home_player_11",
+                "away_player_1",
+                "away_player_2",
+                "away_player_3",
+                "away_player_4",
+                "away_player_5",
+                "away_player_6",
+                "away_player_7",
+                "away_player_8",
+                "away_player_9",
+                "away_player_10",
+                "away_player_11",
+              ])
+            );
+          }
+        });
+        let playerCols = undefined;
+        let playerRows = undefined;
+        playerCsv.forEach(function (data) {
+          if (player_array.includes(parseInt(data.player_api_id)) === true) {
+            if (playerCols === undefined && playerRows === undefined) {
+              playerCols = Object.keys(data).join(";");
+              playerRows = Object.values(data).join(";");
+            } else {
+              playerRows = playerRows + "|" + Object.values(data).join(";");
+            }
+          }
+        });
+        player_array.filter(Number);
+
+        let playerAttrCols = undefined;
+        let playerAttrRows = undefined;
+        playerAttrCsv.forEach(function (data) {
+          if (player_array.includes(parseInt(data.player_api_id)) === true) {
+            if (playerAttrCols === undefined && playerAttrRows === undefined) {
+              playerAttrCols = Object.keys(data).join(";");
+              playerAttrRows = Object.values(data).join(";");
+            } else {
+              playerAttrRows =
+                playerAttrRows + "|" + Object.values(data).join(";");
+            }
+          }
+        });
+
+        let teamCols = undefined;
+        let teamRows = undefined;
+        teamCsv.forEach(function (data) {
+          if (
+            data.team_long_name.toString() === atn.toString() ||
+            data.team_long_name.toString() === htn.toString()
+          ) {
+            if (teamCols === undefined && teamRows === undefined) {
+              teamCols = Object.keys(data).join(";");
+              teamRows = Object.values(data).join(";");
+            } else {
+              teamRows = teamRows + "|" + Object.values(data).join(";");
+            }
+          }
+        });
+
+        let teamAttrCols = undefined;
+        let teamAttrRows = undefined;
+        teamAttrCsv.forEach(function (data) {
+          if (
+            data.team_api_id.toString() === htn_api_id.toString() ||
+            data.team_api_id.toString() === atn_api_id.toString()
+          ) {
+            if (teamAttrCols === undefined && teamAttrRows === undefined) {
+              teamAttrCols = Object.keys(data).join(";");
+              teamAttrRows = Object.values(data).join(";");
+            } else {
+              teamAttrRows = teamAttrRows + "|" + Object.values(data).join(";");
+            }
+          }
+        });
+
+        pyodide
+          .runPythonAsync(
+            `
+        import pandas as pd
+        import matplotlib.pyplot as plt
+        import numpy as np
+        from math import pi
+        import io
+        import base64
+
+        # VISUAL ONE
+
+        try:
+          plt.show()
+          plt.close("all")
+        except Exception:
+          print('keep going')
+
+        match_id = ` +
+              match_id +
+              `
+
+        filtered_match_cols = '` +
+              matchesCols +
+              `'.split(';')
+        filtered_match_rows = []
+        filtered_match_rows.append('` +
+              matchesRows +
+              `'.split(';'))
+
+        filtered_team_cols = '` +
+              teamCols +
+              `'.split(';')
+        filtered_team_rows = []
+        temp_team = '` +
+              teamRows +
+              `'
+        temp_team = temp_team.split('|')
+        for iter in temp_team:
+            filtered_team_rows.append(iter.split(';'))
+
+        filtered_team_attr_cols = '` +
+              teamAttrCols +
+              `'.split(';')
+        filtered_team_attr_rows = []
+        temp_team_attr = '` +
+              teamAttrRows +
+              `'
+        temp_team_attr = temp_team_attr.split('|')
+        for iter in temp_team_attr:
+            filtered_team_attr_rows.append(iter.split(';'))
+
+        match = pd.DataFrame(filtered_match_rows, columns = filtered_match_cols)
+        match['match_api_id'] = match['match_api_id'].astype(int)
+
+        team = pd.DataFrame(filtered_team_rows, columns = filtered_team_cols)
+        team_attr = pd.DataFrame(filtered_team_attr_rows, columns = filtered_team_attr_cols)
+
+
+        team_attr = pd.merge(team_attr, team, left_on='team_api_id',
+                            right_on='team_api_id')
+
+        img_str = ''
+        match_select = int(match_id)
+        spec_match = match[match['match_api_id'].astype(int) == match_select]
+        home = spec_match['home_team_api_id'].iloc[0]
+        away = spec_match['away_team_api_id'].iloc[0]
+        home_attr = team_attr[team_attr['team_api_id'].astype(int) == int(home)]
+        home_attr = home_attr.head(1)
+        away_attr = team_attr[team_attr['team_api_id'].astype(int) == int(away)]
+        away_attr = away_attr.head(1)
+        f_s_attr = home_attr.append(away_attr)
+        f_s_attr1 = f_s_attr[['buildUpPlaySpeed', 'buildUpPlayPassing',
+                              'chanceCreationPassing', 'chanceCreationShooting', 'chanceCreationCrossing',
+                              'defencePressure', 'defenceAggression', 'defenceTeamWidth']]
+        f_s_attr1[['buildUpPlaySpeed', 'buildUpPlayPassing',
+                              'chanceCreationPassing', 'chanceCreationShooting', 'chanceCreationCrossing',
+                              'defencePressure', 'defenceAggression', 'defenceTeamWidth']] = f_s_attr1[['buildUpPlaySpeed', 'buildUpPlayPassing',
+                              'chanceCreationPassing', 'chanceCreationShooting', 'chanceCreationCrossing',
+                              'defencePressure', 'defenceAggression', 'defenceTeamWidth']].apply(pd.to_numeric, errors='coerce')
+        f_s_attr1 = f_s_attr1.set_index(f_s_attr['team_long_name'])
+        N = len(f_s_attr1.columns)
+        angles = [n / float(N) * 2 * pi for n in range(N)]
+        angles += angles[:1]
+        ax = plt.subplot(111, polar=True)
+        ax.set_theta_offset(pi / 2)
+        ax.set_theta_direction(-1)
+        plt.xticks(angles[:-1], f_s_attr1.columns)
+        ax.set_rlabel_position(0)
+        plt.yticks([10, 20, 30, 40, 50, 60, 70], ["10", "20", "30",
+                                                  "40", "50", "60", "70"], color="grey", size=7)
+        plt.ylim(0, 75)
+        values = f_s_attr1.loc[f_s_attr1.index[0]].values.flatten().tolist()
+        values += values[:1]
+        ax.plot(angles, values, linewidth=1,
+                linestyle='solid', label=f_s_attr1.index[0])
+        ax.fill(angles, values, 'b', alpha=0.1)
+        values = f_s_attr1.loc[f_s_attr1.index[1]].values.flatten().tolist()
+        values += values[:1]
+        ax.plot(angles, values, linewidth=1,
+                linestyle='solid', label=f_s_attr1.index[1])
+        ax.fill(angles, values, 'r', alpha=0.1)
+        buf = io.BytesIO()
+        plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
+        buf = io.BytesIO()
+        plt.savefig(buf,format='png')
+        buf.seek(0)
+        img_str = 'data:image/png;base64,' + base64.b64encode(buf.read()).decode('UTF-8')
+
+        # VISUAL TWO
+        filtered_player_cols = '` +
+              playerCols +
+              `'.split(';')
+        filtered_player_rows = []
+        temp_player = '` +
+              playerRows +
+              `'
+        temp_player = temp_player.split('|')
+        for iter in temp_player:
+            filtered_player_rows.append(iter.split(';'))
+
+        filtered_player_attr_cols = '` +
+              playerAttrCols +
+              `'.split(';')
+        filtered_player_attr_rows = []
+        temp_player_attr = '` +
+              playerAttrRows +
+              `'
+        temp_player_attr = temp_player_attr.split('|')
+        for iter in temp_player_attr:
+            filtered_player_attr_rows.append(iter.split(';'))
+
+        player_df = pd.DataFrame(filtered_player_rows, columns = filtered_player_cols)
+        player_attr_df = pd.DataFrame(filtered_player_attr_rows, columns = filtered_player_attr_cols)
+
+        team_df = team
+
+        match_df = match
+
+        player_full_df = pd.merge(player_df, player_attr_df, on="player_api_id")
+        player_full_df = player_full_df.drop(columns=["id_x", "id_y", "player_fifa_api_id_y"])
+        player_full_df = player_full_df.rename({"player_fifa_api_id_x" : "player_fifa_api_id"}, axis="columns")
+
+        match_row = match_df[match_df["match_api_id"].astype(str) == str(match_id)]
+
+        match_date = match_row["date"].values[0]
+        match_players_home = np.round(match_row[match_row.columns[55:66]].values.astype(np.double)).astype(int)[0]
+        match_players_away = np.round(match_row[match_row.columns[66:77]].values.astype(np.double)).astype(int)[0]
+
+        top_home_df = pd.DataFrame(columns=player_full_df.columns)
+
+        for player_id in match_players_home:
+            player = player_full_df[player_full_df["player_api_id"].astype(str) == str(player_id)]
+            player = player[player["date"].astype(str) <= str(match_date)].head(1)
+            top_home_df = top_home_df.append(player)
+
+        top_home_df = top_home_df.sort_values(by=["overall_rating"], ascending=False)
+        top_home_ids = top_home_df["player_api_id"].head(2).values
+
+        top_away_df = pd.DataFrame(columns=player_full_df.columns)
+
+        for player_id in match_players_away:
+            player = player_full_df[player_full_df["player_api_id"].astype(str) == str(player_id)]
+            player = player[player["date"].astype(str) <= str(match_date)].head(1)
+            top_away_df = top_away_df.append(player)
+
+        top_away_df = top_away_df.sort_values(by=["overall_rating"], ascending=False)
+        top_away_ids = top_away_df["player_api_id"].head(2).values
+
+        top_ids = np.concatenate((top_home_ids, top_away_ids), axis=None)
+
+        player_index = []
+        overall_rating = []
+        acceleration = []
+        vision = []
+        jumping = []
+        stamina = []
+
+        for player_id in top_ids:
+            player = player_full_df[player_full_df["player_api_id"].astype(str) == str(player_id)]
+            player = player[player["date"].astype(str) <= str(match_date)].head(1)
+
+            player_index.append(player["player_name"].values[0])
+            overall_rating.append(float(player["overall_rating"].values[0]))
+            acceleration.append(float(player["acceleration"].values[0]))
+            vision.append(float(player["vision"].values[0]))
+            jumping.append(float(player["jumping"].values[0]))
+            stamina.append(float(player["stamina"].values[0]))
+
+        player_stat_df = pd.DataFrame({"Overall Rating": overall_rating, "Acceleration": acceleration, "Vision": vision, "Jumping": jumping, "Stamina": stamina},index=player_index)
+        compare_vis = player_stat_df.plot.bar(rot=0, figsize=(10, 5), color={"#59E287", "#FFD300", "#8D021F", "#000080", "#2661F7"})
+
+        compare_vis.axvline(x=1.5, color="grey")
+
+        compare_vis.legend(loc='upper center', bbox_to_anchor=(0.5, 1.05), ncol=5, fancybox=True, shadow=True)
+
+        home_name = team_df[team_df["team_api_id"].astype(str) == match_row["home_team_api_id"].values[0]]["team_long_name"].values[0]
+        away_name = team_df[team_df["team_api_id"].astype(str) == match_row["away_team_api_id"].values[0]]["team_long_name"].values[0]
+
+        compare_vis.text(0.5, -10, home_name, horizontalalignment='center', verticalalignment='center', fontsize=12)
+        compare_vis.text(2.5, -10, away_name, horizontalalignment='center', verticalalignment='center', fontsize=12)
+
+        fig = compare_vis.get_figure()
+        buf = io.BytesIO()
+        fig.savefig(buf,format='png')
+        buf.seek(0)
+        img_str_two = 'data:image/png;base64,' + base64.b64encode(buf.read()).decode('UTF-8')
+        `
+          )
+          .then(() => {
+            while (true) {
+              try {
+                if (pyodide.globals.img_str === undefined) {
+                  //do nothing
+                } else if (pyodide.globals.img_str === "") {
+                  //do nothing
+                } else {
+                  break;
+                }
+              } catch (e) {
+                console.log(e);
+              }
+            }
+            try {
+              document.getElementById("pyplotfigure").src =
+                pyodide.globals.img_str;
+              document.getElementById("pandasfigure").src =
+                pyodide.globals.img_str_two;
+            } catch (err) {
+              alert(
+                "We don't have enough data to make this visual, please go back and select another node."
+              );
+            }
+          })
+          .catch((err) => {
+            alert(
+              "We don't have enough data to make this visual, please go back and select another node."
+            );
+          });
+      }
+
+      function showNodeDiv() {
+        var statsElemen = document.getElementById("details");
+        statsElemen.style.display = "none";
+        var mainElemen = document.getElementById("overview");
+        mainElemen.style.display = origDisplayStyle;
+        document.getElementById("pyplotfigure").src = "#";
+        document.getElementById("pandasfigure").src = "#";
+      }
+
+      function loadPythonLibs() {
+        languagePluginLoader.then(() => {
+          pyodide.loadPackage(["matplotlib", "pandas"]).then(() => {
+            pyodideReady = 1;
+          });
+        });
+      }
+
+      function main() {
+        getBaseData();
+      }
+
+      main();
+    </script>
+  </body>
+</html>
