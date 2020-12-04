@@ -349,7 +349,7 @@
               winner: winner_name,
               home_goals: filtered_data[y].home_team_goal,
               away_goals: filtered_data[y].away_team_goal,
-              match_id: filtered_data[y].id,
+              match_id: filtered_data[y].match_api_id,
             });
             let indexer = y + 1;
             while (indexer < filtered_data.length) {
@@ -387,7 +387,6 @@
             }
           }
           makeNodegraph(temp_obj);
-          // console.log(filtered_data);
         }
       }
 
@@ -692,6 +691,14 @@
       function loadMatchStats(match_id) {
         var statsElemen = document.getElementById("details");
         statsElemen.style.display = origDisplayStyle;
+        let matchesCols = undefined;
+        let matchesRows;
+        matchesJson.forEach(function (data) {
+          if (data.match_api_id.toString() === match_id.toString()) {
+            matchesCols = Object.keys(data).join(";");
+            matchesRows = Object.values(data).join(";");
+          }
+        });
 
         // pyodide.runPython(`
         //         import matplotlib.pyplot as plt
@@ -703,8 +710,38 @@
         //         buf.seek(0)
         //         img_str = 'data:image/png;base64,' + base64.b64encode(buf.read()).decode('UTF-8')`);
 
-        pyodide.runPython(
-          `
+        // console.log(
+        //   pyodide.runPython(
+        //     `
+        // import pandas as pd
+        // import matplotlib.pyplot as plt
+        // from math import pi
+        // import io
+        // import base64
+        // import pyodide
+
+        // filtered_match_cols = '` +
+        //       matchesCols +
+        //       `'.split(';')
+        // filtered_match_rows = []
+        // filtered_match_rows.append('` +
+        //       matchesRows +
+        //       `'.split(';'))
+        // match = pd.DataFrame(filtered_match_rows, columns = filtered_match_cols)
+        // match_select = int('` +
+        //       match_id +
+        //       `')
+        // spec_match = match[match['match_api_id'].astype(int) == match_select]
+        // home = spec_match['home_team_api_id'].iloc[0]
+        // away = spec_match['away_team_api_id'].iloc[0]
+        // print(home)
+        // print(away)`
+        //   )
+        // );
+
+        pyodide
+          .runPythonAsync(
+            `
         import pandas as pd
         import matplotlib.pyplot as plt
         from math import pi
@@ -712,61 +749,84 @@
         import base64
         import pyodide
 
-        match = pd.read_json(pyodide.open_url("http://localhost:5500/data/match.json"))
+        match_id = ` +
+              match_id +
+              `
+
+        filtered_match_cols = '` +
+              matchesCols +
+              `'.split(';')
+        filtered_match_rows = []
+        filtered_match_rows.append('` +
+              matchesRows +
+              `'.split(';'))
+
+        match = pd.DataFrame(filtered_match_rows, columns = filtered_match_cols)
+        match['match_api_id'] = match['match_api_id'].astype(int)
         team = pd.read_csv(pyodide.open_url("http://localhost:5500/data/team.csv"))
         team_attr = pd.read_csv(pyodide.open_url("http://localhost:5500/data/team_attr.csv"))
         team_attr = pd.merge(team_attr, team, left_on='team_api_id',
                             right_on='team_api_id')
 
-
-        def match_viz(match_select):
-            spec_match = match[match['match_api_id'] == match_select]
-            home = spec_match['home_team_api_id']
-            away = spec_match['away_team_api_id']
-            home_attr = team_attr[team_attr['team_api_id'] == home.item()]
-            home_attr = home_attr.head(1)
-            away_attr = team_attr[team_attr['team_api_id'] == away.item()]
-            away_attr = away_attr.head(1)
-            f_s_attr = home_attr.append(away_attr)
-            f_s_attr1 = f_s_attr[['buildUpPlaySpeed', 'buildUpPlayPassing',
-                                  'chanceCreationPassing', 'chanceCreationShooting', 'chanceCreationCrossing',
-                                  'defencePressure', 'defenceAggression', 'defenceTeamWidth']]
-            f_s_attr1 = f_s_attr1.set_index(f_s_attr['team_long_name'])
-            N = len(f_s_attr1.columns)
-            angles = [n / float(N) * 2 * pi for n in range(N)]
-            angles += angles[:1]
-            ax = plt.subplot(111, polar=True)
-            ax.set_theta_offset(pi / 2)
-            ax.set_theta_direction(-1)
-            plt.xticks(angles[:-1], f_s_attr1.columns)
-            ax.set_rlabel_position(0)
-            plt.yticks([10, 20, 30, 40, 50, 60, 70], ["10", "20", "30",
-                                                      "40", "50", "60", "70"], color="grey", size=7)
-            plt.ylim(0, 75)
-            values = f_s_attr1.loc[f_s_attr1.index[0]].values.flatten().tolist()
-            values += values[:1]
-            ax.plot(angles, values, linewidth=1,
-                    linestyle='solid', label=f_s_attr1.index[0])
-            ax.fill(angles, values, 'b', alpha=0.1)
-            values = f_s_attr1.loc[f_s_attr1.index[1]].values.flatten().tolist()
-            values += values[:1]
-            ax.plot(angles, values, linewidth=1,
-                    linestyle='solid', label=f_s_attr1.index[1])
-            ax.fill(angles, values, 'r', alpha=0.1)
-            buf = io.BytesIO()
-            plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
-            buf = io.BytesIO()
-            plt.savefig(buf,format='png')
-            buf.seek(0)
-            img_str = 'data:image/png;base64,' + base64.b64encode(buf.read()).decode('UTF-8')
-
-
-        match_viz(` +
-            match_id +
-            ")"
-        );
-
-        document.getElementById("pyplotfigure").src = pyodide.globals.img_str;
+        img_str = ''
+        match_select = int(match_id)
+        spec_match = match[match['match_api_id'].astype(int) == match_select]
+        home = spec_match['home_team_api_id'].iloc[0]
+        away = spec_match['away_team_api_id'].iloc[0]
+        home_attr = team_attr[team_attr['team_api_id'].astype(int) == int(home)]
+        home_attr = home_attr.head(1)
+        away_attr = team_attr[team_attr['team_api_id'].astype(int) == int(away)]
+        away_attr = away_attr.head(1)
+        f_s_attr = home_attr.append(away_attr)
+        f_s_attr1 = f_s_attr[['buildUpPlaySpeed', 'buildUpPlayPassing',
+                              'chanceCreationPassing', 'chanceCreationShooting', 'chanceCreationCrossing',
+                              'defencePressure', 'defenceAggression', 'defenceTeamWidth']]
+        f_s_attr1 = f_s_attr1.set_index(f_s_attr['team_long_name'])
+        N = len(f_s_attr1.columns)
+        angles = [n / float(N) * 2 * pi for n in range(N)]
+        angles += angles[:1]
+        ax = plt.subplot(111, polar=True)
+        ax.set_theta_offset(pi / 2)
+        ax.set_theta_direction(-1)
+        plt.xticks(angles[:-1], f_s_attr1.columns)
+        ax.set_rlabel_position(0)
+        plt.yticks([10, 20, 30, 40, 50, 60, 70], ["10", "20", "30",
+                                                  "40", "50", "60", "70"], color="grey", size=7)
+        plt.ylim(0, 75)
+        values = f_s_attr1.loc[f_s_attr1.index[0]].values.flatten().tolist()
+        values += values[:1]
+        ax.plot(angles, values, linewidth=1,
+                linestyle='solid', label=f_s_attr1.index[0])
+        ax.fill(angles, values, 'b', alpha=0.1)
+        values = f_s_attr1.loc[f_s_attr1.index[1]].values.flatten().tolist()
+        values += values[:1]
+        ax.plot(angles, values, linewidth=1,
+                linestyle='solid', label=f_s_attr1.index[1])
+        ax.fill(angles, values, 'r', alpha=0.1)
+        buf = io.BytesIO()
+        plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
+        buf = io.BytesIO()
+        plt.savefig(buf,format='png')
+        buf.seek(0)
+        img_str = 'data:image/png;base64,' + base64.b64encode(buf.read()).decode('UTF-8')`
+          )
+          .then(() => {
+            while (true) {
+              try {
+                if (pyodide.globals.img_str === undefined) {
+                  //do nothing
+                } else if (pyodide.globals.img_str === "") {
+                  //do nothing
+                } else {
+                  break;
+                }
+              } catch (e) {
+                console.log(e);
+              }
+            }
+            document.getElementById("pyplotfigure").src =
+              pyodide.globals.img_str;
+          });
       }
 
       function showNodeDiv() {
@@ -781,11 +841,6 @@
         languagePluginLoader.then(() => {
           pyodide.loadPackage(["matplotlib", "pandas"]).then(() => {
             pyodideReady = 1;
-            // fetch("data/match.json").then((response) => (matchRaw = response));
-            // fetch("data/team_attr.csv").then(
-            //   (response) => (teamAttrRaw = response)
-            // );
-            // fetch("data/team.csv").then((response) => (teamRaw = response));
           });
         });
       }
