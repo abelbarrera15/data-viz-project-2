@@ -120,7 +120,6 @@
       let teamTwoValue;
       let origDisplayStyle = undefined;
       let pyodideReady = 0;
-      let current_url = window.location.href;
 
       function getBaseData() {
         //reading the data
@@ -881,12 +880,15 @@
         f_s_attr1 = f_s_attr[['buildUpPlaySpeed', 'buildUpPlayPassing',
                               'chanceCreationPassing', 'chanceCreationShooting', 'chanceCreationCrossing',
                               'defencePressure', 'defenceAggression', 'defenceTeamWidth']]
+        f_s_attr1.replace('null','0')
         f_s_attr1[['buildUpPlaySpeed', 'buildUpPlayPassing',
                               'chanceCreationPassing', 'chanceCreationShooting', 'chanceCreationCrossing',
                               'defencePressure', 'defenceAggression', 'defenceTeamWidth']] = f_s_attr1[['buildUpPlaySpeed', 'buildUpPlayPassing',
                               'chanceCreationPassing', 'chanceCreationShooting', 'chanceCreationCrossing',
                               'defencePressure', 'defenceAggression', 'defenceTeamWidth']].apply(pd.to_numeric, errors='coerce')
         f_s_attr1 = f_s_attr1.set_index(f_s_attr['team_long_name'])
+        f_s_attr1.loc[len(f_s_attr1)] = 0
+        f_s_attr1.loc[len(f_s_attr1)] = 0
         N = len(f_s_attr1.columns)
         angles = [n / float(N) * 2 * pi for n in range(N)]
         angles += angles[:1]
@@ -900,8 +902,7 @@
         plt.ylim(0, 75)
         values = f_s_attr1.loc[f_s_attr1.index[0]].values.flatten().tolist()
         values += values[:1]
-        ax.plot(angles, values, linewidth=1,
-                linestyle='solid', label=f_s_attr1.index[0])
+        ax.plot(angles, values, linewidth=1, linestyle='solid', label=f_s_attr1.index[0])
         ax.fill(angles, values, 'b', alpha=0.1)
         values = f_s_attr1.loc[f_s_attr1.index[1]].values.flatten().tolist()
         values += values[:1]
@@ -952,15 +953,16 @@
         match_row = match_df[match_df["match_api_id"].astype(str) == str(match_id)]
 
         match_date = match_row["date"].values[0]
-        match_players_home = np.round(match_row[match_row.columns[55:66]].values.astype(np.double)).astype(int)[0]
-        match_players_away = np.round(match_row[match_row.columns[66:77]].values.astype(np.double)).astype(int)[0]
+        match_players_home = match_row[match_row.columns[55:66]].values[0]
+        match_players_away = match_row[match_row.columns[66:77]].values[0]
 
         top_home_df = pd.DataFrame(columns=player_full_df.columns)
 
         for player_id in match_players_home:
-            player = player_full_df[player_full_df["player_api_id"].astype(str) == str(player_id)]
-            player = player[player["date"].astype(str) <= str(match_date)].head(1)
-            top_home_df = top_home_df.append(player)
+            if (player_id != None):
+              player = player_full_df[player_full_df["player_api_id"].astype(str) == str(player_id)]
+              player = player[player["date"].astype(str) <= str(match_date)].head(1)
+              top_home_df = top_home_df.append(player)
 
         top_home_df = top_home_df.sort_values(by=["overall_rating"], ascending=False)
         top_home_ids = top_home_df["player_api_id"].head(2).values
@@ -968,9 +970,10 @@
         top_away_df = pd.DataFrame(columns=player_full_df.columns)
 
         for player_id in match_players_away:
-            player = player_full_df[player_full_df["player_api_id"].astype(str) == str(player_id)]
-            player = player[player["date"].astype(str) <= str(match_date)].head(1)
-            top_away_df = top_away_df.append(player)
+            if (player_id != None):
+              player = player_full_df[player_full_df["player_api_id"].astype(str) == str(player_id)]
+              player = player[player["date"].astype(str) <= str(match_date)].head(1)
+              top_away_df = top_away_df.append(player)
 
         top_away_df = top_away_df.sort_values(by=["overall_rating"], ascending=False)
         top_away_ids = top_away_df["player_api_id"].head(2).values
@@ -989,11 +992,31 @@
             player = player[player["date"].astype(str) <= str(match_date)].head(1)
 
             player_index.append(player["player_name"].values[0])
-            overall_rating.append(float(player["overall_rating"].values[0]))
-            acceleration.append(float(player["acceleration"].values[0]))
-            vision.append(float(player["vision"].values[0]))
-            jumping.append(float(player["jumping"].values[0]))
-            stamina.append(float(player["stamina"].values[0]))
+
+            try:
+                overall_rating.append(float(player["overall_rating"].values[0]))
+            except Exception:
+                overall_rating.append(0)
+
+            try:
+                acceleration.append(float(player["acceleration"].values[0]))
+            except Exception:
+                acceleration.append(0)
+
+            try:
+                vision.append(float(player["vision"].values[0]))
+            except Exception:
+                vision.append(0)
+
+            try:
+                jumping.append(float(player["jumping"].values[0]))
+            except Exception:
+                jumping.append(0)
+
+            try:
+                stamina.append(float(player["stamina"].values[0]))
+            except Exception:
+                stamina.append(0)
 
         player_stat_df = pd.DataFrame({"Overall Rating": overall_rating, "Acceleration": acceleration, "Vision": vision, "Jumping": jumping, "Stamina": stamina},index=player_index)
         compare_vis = player_stat_df.plot.bar(rot=0, figsize=(10, 5), color={"#59E287", "#FFD300", "#8D021F", "#000080", "#2661F7"})
@@ -1013,6 +1036,12 @@
         fig.savefig(buf,format='png')
         buf.seek(0)
         img_str_two = 'data:image/png;base64,' + base64.b64encode(buf.read()).decode('UTF-8')
+
+
+        #VISUAL THREE DATA WRANGLING
+
+
+        
         `
           )
           .then(() => {
