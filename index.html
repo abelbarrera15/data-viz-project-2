@@ -36,6 +36,37 @@
       background-color: #4caf50;
       color: black;
     }
+
+    .chart {
+      margin: 10px;
+      padding-top: 10px;
+    }
+
+    .chart .right {
+      stroke: white;
+      fill: indianred;
+    }
+
+    .chart .left {
+      stroke: white;
+      fill: steelblue;
+    }
+
+    .chart rect:hover {
+      fill: #64707d;
+    }
+
+    .chart text {
+      fill: #24da82;
+    }
+
+    .chart text.name {
+      fill: black;
+    }
+
+    .chart text.title {
+      fill: #2216ff;
+    }
   </style>
   <head>
     <!-- Latest compiled CSS v3.4.1 -->
@@ -102,8 +133,24 @@
         >&laquo; Go Back</a
       >
       <div id="statvisuals">
-        <div id="pyplotdiv"><img id="pyplotfigure" /></div>
-        <div id="pandasdiv"><img id="pandasfigure" /></div>
+        <div class="row">
+          <div class="col-sm-6">
+            <div id="pyplotdiv" style="padding-left: 10px">
+              <img id="pyplotfigure" />
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div id="summaryChartHolder"></div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-sm-8">
+            <div id="pandasdiv"><img id="pandasfigure" /></div>
+          </div>
+          <div class="col-sm-4">
+            <div id="summaryChartInteractionHolder"></div>
+          </div>
+        </div>
       </div>
     </div>
     <script>
@@ -120,6 +167,7 @@
       let teamTwoValue;
       let origDisplayStyle = undefined;
       let pyodideReady = 0;
+      let yearValue;
 
       function getBaseData() {
         //reading the data
@@ -282,7 +330,6 @@
         let leagueElement = document.getElementById("selectLeague");
         let leagueValue =
           leagueElement.options[leagueElement.selectedIndex].value;
-        let yearValue;
         let yearElement;
         let teamOneElement;
         let teamTwoElement;
@@ -804,6 +851,51 @@
             }
           }
         });
+        let matchStatCols = undefined;
+        let matchStatRows = undefined;
+        let match_hist = [];
+        matchesJson.forEach(function (data) {
+          if (
+            data.home_team_api_id.toString() === htn_api_id.toString() ||
+            data.home_team_api_id.toString() === atn_api_id.toString() ||
+            data.away_team_api_id.toString() === htn_api_id.toString() ||
+            data.away_team_api_id.toString() === atn_api_id.toString()
+          ) {
+            if (matchStatCols === undefined && matchStatRows === undefined) {
+              matchStatCols = Object.keys(data).join(";");
+              matchStatRows = Object.values(data).join(";");
+            } else {
+              matchStatRows =
+                matchStatRows + "|" + Object.values(data).join(";");
+            }
+          }
+          if (
+            data.league_id.toString() === league_id.toString() &&
+            data.season.toString() === yearValue.toString()
+          ) {
+            if (match_hist.includes(data.away_team_api_id) === false) {
+              match_hist.push(data.away_team_api_id.toString());
+            }
+            if (
+              match_hist.includes(data.home_team_api_id.toString()) === false
+            ) {
+              match_hist.push(data.home_team_api_id.toString());
+            }
+          }
+        });
+
+        let teamAllCols = undefined;
+        let teamAllRows = undefined;
+        teamCsv.forEach(function (data) {
+          if (match_hist.includes(data.team_api_id.toString()) === true) {
+            if (teamAllCols === undefined && teamAllRows === undefined) {
+              teamAllCols = Object.keys(data).join(";");
+              teamAllRows = Object.values(data).join(";");
+            } else {
+              teamAllRows = teamAllRows + "|" + Object.values(data).join(";");
+            }
+          }
+        });
 
         pyodide
           .runPythonAsync(
@@ -814,6 +906,8 @@
         from math import pi
         import io
         import base64
+        import re
+        import json
 
         # VISUAL ONE
 
@@ -839,9 +933,9 @@
               teamCols +
               `'.split(';')
         filtered_team_rows = []
-        temp_team = '` +
+        temp_team = "` +
               teamRows +
-              `'
+              `"
         temp_team = temp_team.split('|')
         for iter in temp_team:
             filtered_team_rows.append(iter.split(';'))
@@ -921,9 +1015,9 @@
               playerCols +
               `'.split(';')
         filtered_player_rows = []
-        temp_player = '` +
+        temp_player = "` +
               playerRows +
-              `'
+              `"
         temp_player = temp_player.split('|')
         for iter in temp_player:
             filtered_player_rows.append(iter.split(';'))
@@ -932,9 +1026,9 @@
               playerAttrCols +
               `'.split(';')
         filtered_player_attr_rows = []
-        temp_player_attr = '` +
+        temp_player_attr = "` +
               playerAttrRows +
-              `'
+              `"
         temp_player_attr = temp_player_attr.split('|')
         for iter in temp_player_attr:
             filtered_player_attr_rows.append(iter.split(';'))
@@ -1040,8 +1134,97 @@
 
         #VISUAL THREE DATA WRANGLING
 
+        filtered_match_stat_cols = '` +
+              matchStatCols +
+              `'.split(';')
+        filtered_match_stat_rows = []
+        temp_match_stat = "` +
+              matchStatRows +
+              `"
+        temp_match_stat = temp_match_stat.split('|')
+        for iter in temp_match_stat:
+            filtered_match_stat_rows.append(iter.split(';'))
 
-        
+        filtered_teams_cols = '` +
+              teamAllCols +
+              `'.split(';')
+        filtered_teams_rows = []
+        temp_team_all_stat = "` +
+              teamAllRows +
+              `"
+        temp_team_all_stat = temp_team_all_stat.split('|')
+        for iter in temp_team_all_stat:
+            filtered_teams_rows.append(iter.split(';'))
+
+        match = pd.DataFrame(filtered_match_stat_rows, columns = filtered_match_stat_cols)
+        team = pd.DataFrame(filtered_teams_rows, columns = filtered_teams_cols)
+
+        match=pd.merge(match,team,left_on='home_team_api_id',right_on='team_api_id')
+        match=pd.merge(match,team,left_on='away_team_api_id',right_on='team_api_id')
+
+        league = '` +
+              league_id +
+              `'
+        season = '` +
+              yearValue +
+              `'
+        match_select = match_id
+
+        final_list = []
+        match1 = match[match['league_id'].astype(str)==str(league)]
+        match1 = match1[match1['season'].astype(str)==str(season)]
+        rwcnt = match1['home_team_api_id'].shape[0]
+        for df_row in range(match1['home_team_api_id'].shape[0]):
+            team1 = match1['home_team_api_id'].iloc[df_row]
+            team2 = match1['away_team_api_id'].iloc[df_row]
+            team1_matches = match1[(match1['home_team_api_id'] ==team1) | (match1['away_team_api_id'] ==team1)]
+            team1_matches['match_api_id']=1
+            team2_matches = match1[(match1['home_team_api_id'] ==team2) | (match1['away_team_api_id'] ==team2)]
+            team2_matches['match_api_id']=1
+            spec_match = match1[match1['match_api_id']==match1['match_api_id'].iloc[df_row]]
+            stats=['goal','shoton','shotoff','foulcommit','card','cross','corner']
+            a=str(team1)
+            b=str(team2)
+            home_list=[]
+            away_list=[]
+            for i in stats:
+                spec_match.fillna('')
+                split_up=re.split('>|<',spec_match[i].iloc[0])
+                a=str(spec_match['home_team_api_id'].iloc[0])
+                b=str(spec_match['away_team_api_id'].iloc[0])
+                home_stats=0
+                away_stats=0
+                for i in split_up:
+                    if a in i:
+                        home_stats+=1
+
+                    if b in i:
+                        away_stats+=1
+
+                home_list.append(home_stats)
+                away_list.append(away_stats)
+            split_up2=re.split('<homepos>|</homepos>',spec_match['possession'].iloc[0])
+            try:
+                home_poss=split_up2[7]
+            except IndexError:
+                home_poss = 0
+            home_poss=int(home_poss)
+            home_list.append(home_poss)
+            split_up3=re.split('<awaypos>|</awaypos>',spec_match['possession'].iloc[0])
+            try:
+                away_poss=split_up3[7]
+            except IndexError:
+                away_poss = 0 
+            away_poss=int(away_poss)
+            away_list.append(away_poss)
+            home_list.extend(away_list)
+            if str(match1['match_api_id'].iloc[df_row]) == str(match_select):
+                home_list.append(1)
+            else:
+                home_list.append(0)
+            final_list.append(home_list)
+        comp_stats = pd.DataFrame(final_list, columns = ['Home_Goals','Home_Shots_on_Goal','Home_Shots_off_Goal','Home_Fouls_Committed','Home_Yellow_Red_Cards','Home_Crosses','Home_Corner_Kicks','Home_Possessions','Away_Goals','Away_Shots_on_Goal','Away_Shots_off_Goal','Away_Fouls_Committed','Away_Yellow_Red_Cards','Away_Crosses','Away_Corner_Kicks','Away_Possessions','IsMatchId'])
+        match_stat_comp = json.loads(comp_stats.to_json(orient='records'))        
         `
           )
           .then(() => {
@@ -1063,6 +1246,7 @@
                 pyodide.globals.img_str;
               document.getElementById("pandasfigure").src =
                 pyodide.globals.img_str_two;
+              statSummaryChart(pyodide.globals.match_stat_comp);
             } catch (err) {
               alert(
                 "We don't have enough data to make this visual, please go back and select another node."
@@ -1074,6 +1258,222 @@
               "We don't have enough data to make this visual, please go back and select another node."
             );
           });
+      }
+
+      function statSummaryChart(json_data) {
+        console.log(json_data);
+        let cols = undefined;
+        final_data = [];
+        final_cols = [
+          "Goals",
+          "Shots on Goal",
+          "Shots off Goal",
+          "Fouls Committed",
+          "Yellow/Red Cards",
+          "Crosses",
+          "Corner Kicks",
+          "Possessions",
+        ];
+        json_data.forEach(function (data) {
+          if (cols === undefined) {
+            cols = Object.keys(data);
+          }
+          if (data.IsMatchId.toString() === "1") {
+            final_cols.forEach(function (label) {
+              if (label.toString() === "Goals") {
+                final_data.push({
+                  data_point: label,
+                  home_value: data.Home_Goals,
+                  away_value: data.Away_Goals,
+                });
+              } else if (label.toString() === "Shots on Goal") {
+                final_data.push({
+                  data_point: label,
+                  home_value: data.Home_Shots_on_Goal,
+                  away_value: data.Away_Shots_on_Goal,
+                });
+              } else if (label.toString() === "Shots off Goal") {
+                final_data.push({
+                  data_point: label,
+                  home_value: data.Home_Shots_off_Goal,
+                  away_value: data.Away_Shots_off_Goal,
+                });
+              } else if (label.toString() === "Fouls Committed") {
+                final_data.push({
+                  data_point: label,
+                  home_value: data.Home_Fouls_Committed,
+                  away_value: data.Away_Fouls_Committed,
+                });
+              } else if (label.toString() === "Yellow/Red Cards") {
+                final_data.push({
+                  data_point: label,
+                  home_value: data.Home_Yellow_Red_Cards,
+                  away_value: data.Away_Yellow_Red_Cards,
+                });
+              } else if (label.toString() === "Crosses") {
+                final_data.push({
+                  data_point: label,
+                  home_value: data.Home_Crosses,
+                  away_value: data.Away_Crosses,
+                });
+              } else if (label.toString() === "Corner Kicks") {
+                final_data.push({
+                  data_point: label,
+                  home_value: data.Home_Corner_Kicks,
+                  away_value: data.Away_Corner_Kicks,
+                });
+              } else if (label.toString() === "Possessions") {
+                final_data.push({
+                  data_point: label,
+                  home_value: data.Home_Possessions,
+                  away_value: data.Away_Possessions,
+                });
+              }
+            });
+          }
+        });
+        let width = window.innerWidth * 0.5 * 0.75 * 0.5;
+        let labelArea = window.innerWidth * 0.5 * 0.25;
+        let bar_height = 10;
+        let height = bar_height * 50;
+        var rightOffset = width + labelArea;
+        var lCol = "home_value";
+        var rCol = "away_value";
+        var xFrom = d3.scale.linear().range([0, width]);
+        var xTo = d3.scale.linear().range([0, width]);
+        var y = d3.scale.ordinal().rangeBands([20, height]);
+
+        let data = final_data;
+
+        d3.select("#summaryChart").remove();
+
+        var chart = d3
+          .select("#summaryChartHolder")
+          .append("svg")
+          .attr("class", "chart")
+          .attr("width", labelArea + width + width)
+          .attr("height", height)
+          .attr("id", "summaryChart");
+
+        xFrom.domain(
+          d3.extent(data, function (d) {
+            return d[lCol] * 2;
+          })
+        );
+        xTo.domain(
+          d3.extent(data, function (d) {
+            return d[rCol] * 2;
+          })
+        );
+
+        y.domain(
+          data.map(function (d) {
+            return d.data_point;
+          })
+        );
+
+        var yPosByIndex = function (d) {
+          return y(d.data_point);
+        };
+        chart
+          .selectAll("rect.left")
+          .data(data)
+          .enter()
+          .append("rect")
+          .attr("x", function (d) {
+            return width - xFrom(d[lCol]);
+          })
+          .attr("y", yPosByIndex)
+          .attr("class", "left")
+          .attr("width", function (d) {
+            return xFrom(d[lCol]);
+          })
+          .attr("height", y.rangeBand());
+        chart
+          .selectAll("text.leftscore")
+          .data(data)
+          .enter()
+          .append("text")
+          .attr("x", function (d) {
+            return width - xFrom(d[lCol]) - 40;
+          })
+          .attr("y", function (d) {
+            return y(d.data_point) + y.rangeBand() / 2;
+          })
+          .attr("dx", "20")
+          .attr("dy", ".36em")
+          .attr("text-anchor", "end")
+          .attr("class", "leftscore")
+          .text(function (d) {
+            return d[lCol];
+          });
+        chart
+          .selectAll("text.name")
+          .data(data)
+          .enter()
+          .append("text")
+          .attr("x", labelArea / 2 + width)
+          .attr("y", function (d) {
+            return y(d.data_point) + y.rangeBand() / 2;
+          })
+          .attr("dy", ".20em")
+          .attr("text-anchor", "middle")
+          .attr("class", "name")
+          .text(function (d) {
+            return d.data_point;
+          });
+
+        chart
+          .selectAll("rect.right")
+          .data(data)
+          .enter()
+          .append("rect")
+          .attr("x", rightOffset)
+          .attr("y", yPosByIndex)
+          .attr("class", "right")
+          .attr("width", function (d) {
+            return xTo(d[rCol]);
+          })
+          .attr("height", y.rangeBand());
+        chart
+          .selectAll("text.score")
+          .data(data)
+          .enter()
+          .append("text")
+          .attr("x", function (d) {
+            return xTo(d[rCol]) + rightOffset + 40;
+          })
+          .attr("y", function (d) {
+            return y(d.data_point) + y.rangeBand() / 2;
+          })
+          .attr("dx", -5)
+          .attr("dy", ".36em")
+          .attr("text-anchor", "end")
+          .attr("class", "score")
+          .text(function (d) {
+            return d[rCol];
+          });
+        chart
+          .append("text")
+          .attr("x", width / 3)
+          .attr("y", 10)
+          .attr("font-weight", 700)
+          .attr("class", "title")
+          .text("Home Team");
+        chart
+          .append("text")
+          .attr("x", width / 3 + rightOffset)
+          .attr("y", 10)
+          .attr("font-weight", 700)
+          .attr("class", "title")
+          .text("Away Team");
+        chart
+          .append("text")
+          .attr("x", width + labelArea / 3)
+          .attr("y", 10)
+          .attr("font-weight", 700)
+          .attr("class", "title")
+          .text("Statistics");
       }
 
       function showNodeDiv() {
