@@ -1514,7 +1514,8 @@
       }
 
       function createTable(statName, statValue, team_name) {
-        match_id_col = [];
+        var dict = new Map();
+        match_id_collection = [];
         matchesJson.forEach(function (data) {
           if (
             data.season.toString() === yearValue.toString() &&
@@ -1522,7 +1523,12 @@
             (data.home_team_name.toString() === team_name.toString() ||
               data.away_team_name.toString() === team_name.toString())
           ) {
-            match_id_col.push(data.match_api_id);
+            if (data.home_team_name.toString() === team_name.toString()) {
+              dict.set(data.match_api_id, "home");
+            } else {
+              dict.set(data.match_api_id, "away");
+            }
+            match_id_collection.push(data.match_api_id);
           }
         });
       }
