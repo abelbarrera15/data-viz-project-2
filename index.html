@@ -36,6 +36,37 @@
       background-color: #4caf50;
       color: black;
     }
+
+    .chart {
+      margin: 10px;
+      padding-top: 10px;
+    }
+
+    .chart .right {
+      stroke: white;
+      fill: indianred;
+    }
+
+    .chart .left {
+      stroke: white;
+      fill: steelblue;
+    }
+
+    .chart rect:hover {
+      fill: #64707d;
+    }
+
+    .chart text {
+      fill: #24da82;
+    }
+
+    .chart text.name {
+      fill: black;
+    }
+
+    .chart text.title {
+      fill: #2216ff;
+    }
   </style>
   <head>
     <!-- Latest compiled CSS v3.4.1 -->
@@ -102,8 +133,25 @@
         >&laquo; Go Back</a
       >
       <div id="statvisuals">
-        <div id="pyplotdiv"><img id="pyplotfigure" /></div>
-        <div id="pandasdiv"><img id="pandasfigure" /></div>
+        <div class="row">
+          <div class="col-sm-6">
+            <div id="pyplotdiv" style="padding-left: 10px">
+              <img id="pyplotfigure" />
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div id="summaryChartHolder"></div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-sm-8">
+            <div id="errorholder"></div>
+            <div id="pandasdiv"><img id="pandasfigure" /></div>
+          </div>
+          <div class="col-sm-4">
+            <div id="summaryChartInteractionHolder"></div>
+          </div>
+        </div>
       </div>
     </div>
     <script>
@@ -120,7 +168,8 @@
       let teamTwoValue;
       let origDisplayStyle = undefined;
       let pyodideReady = 0;
-      let current_url = window.location.href;
+      let yearValue;
+      let matchStatsCsv;
 
       function getBaseData() {
         //reading the data
@@ -135,6 +184,7 @@
           PromiseWrapper(d3.csv, "data/player.csv"),
           PromiseWrapper(d3.csv, "data/player_attr.csv"),
           PromiseWrapper(d3.csv, "data/team_attr.csv"),
+          PromiseWrapper(d3.csv, "data/match_stats.csv"),
         ]).then((resolve) => {
           matchesJson = resolve[0];
           teamCsv = resolve[1];
@@ -142,6 +192,7 @@
           playerCsv = resolve[3];
           playerAttrCsv = resolve[4];
           teamAttrCsv = resolve[5];
+          matchStatsCsv = resolve[6];
 
           let matchesJson_new = [];
           matchesJson.forEach(function (data) {
@@ -283,7 +334,6 @@
         let leagueElement = document.getElementById("selectLeague");
         let leagueValue =
           leagueElement.options[leagueElement.selectedIndex].value;
-        let yearValue;
         let yearElement;
         let teamOneElement;
         let teamTwoElement;
@@ -699,6 +749,15 @@
           .text((d) => d);
       }
 
+      function sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      async function fall_asleep(match_id) {
+        console.log("Taking a break...");
+        await sleep(3000);
+      }
+
       //load the stats div and disspear the node div
       function loadMatchStats(match_id) {
         var statsElemen = document.getElementById("details");
@@ -806,6 +865,12 @@
           }
         });
 
+        let matchBarComp = [];
+        matchStatsCsv.forEach(function (data) {
+          if (data.match_id.toString() === match_id.toString())
+            matchBarComp.push(data);
+        });
+
         pyodide
           .runPythonAsync(
             `
@@ -815,6 +880,8 @@
         from math import pi
         import io
         import base64
+        import re
+        import json
 
         # VISUAL ONE
 
@@ -840,9 +907,9 @@
               teamCols +
               `'.split(';')
         filtered_team_rows = []
-        temp_team = '` +
+        temp_team = "` +
               teamRows +
-              `'
+              `"
         temp_team = temp_team.split('|')
         for iter in temp_team:
             filtered_team_rows.append(iter.split(';'))
@@ -881,12 +948,15 @@
         f_s_attr1 = f_s_attr[['buildUpPlaySpeed', 'buildUpPlayPassing',
                               'chanceCreationPassing', 'chanceCreationShooting', 'chanceCreationCrossing',
                               'defencePressure', 'defenceAggression', 'defenceTeamWidth']]
+        f_s_attr1.replace('null','0')
         f_s_attr1[['buildUpPlaySpeed', 'buildUpPlayPassing',
                               'chanceCreationPassing', 'chanceCreationShooting', 'chanceCreationCrossing',
                               'defencePressure', 'defenceAggression', 'defenceTeamWidth']] = f_s_attr1[['buildUpPlaySpeed', 'buildUpPlayPassing',
                               'chanceCreationPassing', 'chanceCreationShooting', 'chanceCreationCrossing',
                               'defencePressure', 'defenceAggression', 'defenceTeamWidth']].apply(pd.to_numeric, errors='coerce')
         f_s_attr1 = f_s_attr1.set_index(f_s_attr['team_long_name'])
+        f_s_attr1.loc[len(f_s_attr1)] = 0
+        f_s_attr1.loc[len(f_s_attr1)] = 0
         N = len(f_s_attr1.columns)
         angles = [n / float(N) * 2 * pi for n in range(N)]
         angles += angles[:1]
@@ -900,8 +970,7 @@
         plt.ylim(0, 75)
         values = f_s_attr1.loc[f_s_attr1.index[0]].values.flatten().tolist()
         values += values[:1]
-        ax.plot(angles, values, linewidth=1,
-                linestyle='solid', label=f_s_attr1.index[0])
+        ax.plot(angles, values, linewidth=1, linestyle='solid', label=f_s_attr1.index[0])
         ax.fill(angles, values, 'b', alpha=0.1)
         values = f_s_attr1.loc[f_s_attr1.index[1]].values.flatten().tolist()
         values += values[:1]
@@ -916,134 +985,839 @@
         img_str = 'data:image/png;base64,' + base64.b64encode(buf.read()).decode('UTF-8')
 
         # VISUAL TWO
-        filtered_player_cols = '` +
+
+        img_str_two = 'holder'
+
+        try:
+            filtered_player_cols = '` +
               playerCols +
               `'.split(';')
-        filtered_player_rows = []
-        temp_player = '` +
+            filtered_player_rows = []
+            temp_player = "` +
               playerRows +
-              `'
-        temp_player = temp_player.split('|')
-        for iter in temp_player:
-            filtered_player_rows.append(iter.split(';'))
+              `"
+            temp_player = temp_player.split('|')
+            for iter in temp_player:
+                filtered_player_rows.append(iter.split(';'))
 
-        filtered_player_attr_cols = '` +
+            filtered_player_attr_cols = '` +
               playerAttrCols +
               `'.split(';')
-        filtered_player_attr_rows = []
-        temp_player_attr = '` +
+            filtered_player_attr_rows = []
+            temp_player_attr = '` +
               playerAttrRows +
               `'
-        temp_player_attr = temp_player_attr.split('|')
-        for iter in temp_player_attr:
-            filtered_player_attr_rows.append(iter.split(';'))
+            temp_player_attr = temp_player_attr.split('|')
+            for iter in temp_player_attr:
+                filtered_player_attr_rows.append(iter.split(';'))
 
-        player_df = pd.DataFrame(filtered_player_rows, columns = filtered_player_cols)
-        player_attr_df = pd.DataFrame(filtered_player_attr_rows, columns = filtered_player_attr_cols)
+            player_df = pd.DataFrame(filtered_player_rows, columns = filtered_player_cols)
+            player_attr_df = pd.DataFrame(filtered_player_attr_rows, columns = filtered_player_attr_cols)
 
-        team_df = team
+            team_df = team
 
-        match_df = match
+            match_df = match
 
-        player_full_df = pd.merge(player_df, player_attr_df, on="player_api_id")
-        player_full_df = player_full_df.drop(columns=["id_x", "id_y", "player_fifa_api_id_y"])
-        player_full_df = player_full_df.rename({"player_fifa_api_id_x" : "player_fifa_api_id"}, axis="columns")
+            player_full_df = pd.merge(player_df, player_attr_df, on="player_api_id")
+            player_full_df = player_full_df.drop(columns=["id_x", "id_y", "player_fifa_api_id_y"])
+            player_full_df = player_full_df.rename({"player_fifa_api_id_x" : "player_fifa_api_id"}, axis="columns")
 
-        match_row = match_df[match_df["match_api_id"].astype(str) == str(match_id)]
+            match_row = match_df[match_df["match_api_id"].astype(str) == str(match_id)]
 
-        match_date = match_row["date"].values[0]
-        match_players_home = np.round(match_row[match_row.columns[55:66]].values.astype(np.double)).astype(int)[0]
-        match_players_away = np.round(match_row[match_row.columns[66:77]].values.astype(np.double)).astype(int)[0]
+            match_date = match_row["date"].values[0]
+            match_players_home = match_row[match_row.columns[55:66]].values[0]
+            match_players_away = match_row[match_row.columns[66:77]].values[0]
 
-        top_home_df = pd.DataFrame(columns=player_full_df.columns)
+            top_home_df = pd.DataFrame(columns=player_full_df.columns)
 
-        for player_id in match_players_home:
-            player = player_full_df[player_full_df["player_api_id"].astype(str) == str(player_id)]
-            player = player[player["date"].astype(str) <= str(match_date)].head(1)
-            top_home_df = top_home_df.append(player)
+            for player_id in match_players_home:
+                if (player_id != None):
+                  player = player_full_df[player_full_df["player_api_id"].astype(str) == str(player_id)]
+                  player = player[player["date"].astype(str) <= str(match_date)].head(1)
+                  top_home_df = top_home_df.append(player)
 
-        top_home_df = top_home_df.sort_values(by=["overall_rating"], ascending=False)
-        top_home_ids = top_home_df["player_api_id"].head(2).values
+            top_home_df = top_home_df.sort_values(by=["overall_rating"], ascending=False)
+            top_home_ids = top_home_df["player_api_id"].head(2).values
 
-        top_away_df = pd.DataFrame(columns=player_full_df.columns)
+            top_away_df = pd.DataFrame(columns=player_full_df.columns)
 
-        for player_id in match_players_away:
-            player = player_full_df[player_full_df["player_api_id"].astype(str) == str(player_id)]
-            player = player[player["date"].astype(str) <= str(match_date)].head(1)
-            top_away_df = top_away_df.append(player)
+            for player_id in match_players_away:
+                if (player_id != None):
+                  player = player_full_df[player_full_df["player_api_id"].astype(str) == str(player_id)]
+                  player = player[player["date"].astype(str) <= str(match_date)].head(1)
+                  top_away_df = top_away_df.append(player)
 
-        top_away_df = top_away_df.sort_values(by=["overall_rating"], ascending=False)
-        top_away_ids = top_away_df["player_api_id"].head(2).values
+            top_away_df = top_away_df.sort_values(by=["overall_rating"], ascending=False)
+            top_away_ids = top_away_df["player_api_id"].head(2).values
 
-        top_ids = np.concatenate((top_home_ids, top_away_ids), axis=None)
+            top_ids = np.concatenate((top_home_ids, top_away_ids), axis=None)
 
-        player_index = []
-        overall_rating = []
-        acceleration = []
-        vision = []
-        jumping = []
-        stamina = []
+            player_index = []
+            overall_rating = []
+            acceleration = []
+            vision = []
+            jumping = []
+            stamina = []
 
-        for player_id in top_ids:
-            player = player_full_df[player_full_df["player_api_id"].astype(str) == str(player_id)]
-            player = player[player["date"].astype(str) <= str(match_date)].head(1)
+            for player_id in top_ids:
+                player = player_full_df[player_full_df["player_api_id"].astype(str) == str(player_id)]
+                player = player[player["date"].astype(str) <= str(match_date)].head(1)
 
-            player_index.append(player["player_name"].values[0])
-            overall_rating.append(float(player["overall_rating"].values[0]))
-            acceleration.append(float(player["acceleration"].values[0]))
-            vision.append(float(player["vision"].values[0]))
-            jumping.append(float(player["jumping"].values[0]))
-            stamina.append(float(player["stamina"].values[0]))
+                player_index.append(player["player_name"].values[0])
 
-        player_stat_df = pd.DataFrame({"Overall Rating": overall_rating, "Acceleration": acceleration, "Vision": vision, "Jumping": jumping, "Stamina": stamina},index=player_index)
-        compare_vis = player_stat_df.plot.bar(rot=0, figsize=(10, 5), color={"#59E287", "#FFD300", "#8D021F", "#000080", "#2661F7"})
+                try:
+                    overall_rating.append(float(player["overall_rating"].values[0]))
+                except Exception:
+                    overall_rating.append(0)
 
-        compare_vis.axvline(x=1.5, color="grey")
+                try:
+                    acceleration.append(float(player["acceleration"].values[0]))
+                except Exception:
+                    acceleration.append(0)
 
-        compare_vis.legend(loc='upper center', bbox_to_anchor=(0.5, 1.05), ncol=5, fancybox=True, shadow=True)
+                try:
+                    vision.append(float(player["vision"].values[0]))
+                except Exception:
+                    vision.append(0)
 
-        home_name = team_df[team_df["team_api_id"].astype(str) == match_row["home_team_api_id"].values[0]]["team_long_name"].values[0]
-        away_name = team_df[team_df["team_api_id"].astype(str) == match_row["away_team_api_id"].values[0]]["team_long_name"].values[0]
+                try:
+                    jumping.append(float(player["jumping"].values[0]))
+                except Exception:
+                    jumping.append(0)
 
-        compare_vis.text(0.5, -10, home_name, horizontalalignment='center', verticalalignment='center', fontsize=12)
-        compare_vis.text(2.5, -10, away_name, horizontalalignment='center', verticalalignment='center', fontsize=12)
+                try:
+                    stamina.append(float(player["stamina"].values[0]))
+                except Exception:
+                    stamina.append(0)
 
-        fig = compare_vis.get_figure()
-        buf = io.BytesIO()
-        fig.savefig(buf,format='png')
-        buf.seek(0)
-        img_str_two = 'data:image/png;base64,' + base64.b64encode(buf.read()).decode('UTF-8')
+            player_stat_df = pd.DataFrame({"Overall Rating": overall_rating, "Acceleration": acceleration, "Vision": vision, "Jumping": jumping, "Stamina": stamina},index=player_index)
+            compare_vis = player_stat_df.plot.bar(rot=0, figsize=(10, 5), color={"#59E287", "#FFD300", "#8D021F", "#000080", "#2661F7"})
+
+            compare_vis.axvline(x=1.5, color="grey")
+
+            compare_vis.legend(loc='upper center', bbox_to_anchor=(0.5, 1.05), ncol=5, fancybox=True, shadow=True)
+
+            home_name = team_df[team_df["team_api_id"].astype(str) == match_row["home_team_api_id"].values[0]]["team_long_name"].values[0]
+            away_name = team_df[team_df["team_api_id"].astype(str) == match_row["away_team_api_id"].values[0]]["team_long_name"].values[0]
+
+            compare_vis.text(0.5, -10, home_name, horizontalalignment='center', verticalalignment='center', fontsize=12)
+            compare_vis.text(2.5, -10, away_name, horizontalalignment='center', verticalalignment='center', fontsize=12)
+
+            fig = compare_vis.get_figure()
+            buf = io.BytesIO()
+            fig.savefig(buf,format='png')
+            buf.seek(0)
+            img_str_two = 'data:image/png;base64,' + base64.b64encode(buf.read()).decode('UTF-8')
+
+        except Exception:
+            img_str_two = ''
         `
           )
           .then(() => {
             while (true) {
               try {
-                if (pyodide.globals.img_str === undefined) {
+                if (
+                  pyodide.globals.img_str === undefined ||
+                  pyodide.globals.img_str_two === undefined
+                ) {
                   //do nothing
-                } else if (pyodide.globals.img_str === "") {
+                } else if (
+                  pyodide.globals.img_str === "" ||
+                  pyodide.globals.img_str_two === "holder"
+                ) {
                   //do nothing
                 } else {
                   break;
                 }
               } catch (e) {
-                console.log(e);
+                //do nothing
               }
             }
-            try {
-              document.getElementById("pyplotfigure").src =
-                pyodide.globals.img_str;
+
+            document.getElementById("pyplotfigure").src =
+              pyodide.globals.img_str;
+            if (pyodide.globals.img_str_two.toString() === "") {
+              var div = document.getElementById("errorholder");
+              div.innerHTML += "Visual Not Available </br> due to data";
+            } else {
               document.getElementById("pandasfigure").src =
                 pyodide.globals.img_str_two;
-            } catch (err) {
+            }
+            statSummaryChart(
+              matchBarComp,
+              match_id,
+              htn,
+              atn,
+              htn_api_id,
+              atn_api_id
+            );
+          })
+          .catch((err) => {
+            try {
+              fall_asleep();
+              if (pyodide.globals.img_str_two.toString() === "") {
+                var div = document.getElementById("errorholder");
+                div.innerHTML += "Visual Not Available </br> due to data";
+              } else {
+                document.getElementById("pandasfigure").src =
+                  pyodide.globals.img_str_two;
+              }
+              statSummaryChart(
+                matchBarComp,
+                match_id,
+                htn,
+                atn,
+                htn_api_id,
+                atn_api_id
+              );
+            } catch {
               alert(
                 "We don't have enough data to make this visual, please go back and select another node."
               );
             }
+          });
+      }
+
+      function statSummaryChart(
+        json_data,
+        match_id,
+        htn,
+        atn,
+        htn_api_id,
+        atn_api_id
+      ) {
+        let cols = undefined;
+        final_data = [];
+        final_cols = [
+          "Goals",
+          "Shots on Goal",
+          "Shots off Goal",
+          "Fouls Committed",
+          "Yellow/Red Cards",
+          "Crosses",
+          "Corner Kicks",
+          "Possessions",
+        ];
+        json_data.forEach(function (data) {
+          if (cols === undefined) {
+            cols = Object.keys(data);
+          }
+          final_cols.forEach(function (label) {
+            if (label.toString() === "Goals") {
+              final_data.push({
+                data_point: label,
+                home_value: data.Home_Goals,
+                away_value: data.Away_Goals,
+              });
+            } else if (label.toString() === "Shots on Goal") {
+              final_data.push({
+                data_point: label,
+                home_value: data.Home_Shots_on_Goal,
+                away_value: data.Away_Shots_on_Goal,
+              });
+            } else if (label.toString() === "Shots off Goal") {
+              final_data.push({
+                data_point: label,
+                home_value: data.Home_Shots_off_Goal,
+                away_value: data.Away_Shots_off_Goal,
+              });
+            } else if (label.toString() === "Fouls Committed") {
+              final_data.push({
+                data_point: label,
+                home_value: data.Home_Fouls_Committed,
+                away_value: data.Away_Fouls_Committed,
+              });
+            } else if (label.toString() === "Yellow/Red Cards") {
+              final_data.push({
+                data_point: label,
+                home_value: data.Home_Yellow_Red_Cards,
+                away_value: data.Away_Yellow_Red_Cards,
+              });
+            } else if (label.toString() === "Crosses") {
+              final_data.push({
+                data_point: label,
+                home_value: data.Home_Crosses,
+                away_value: data.Away_Crosses,
+              });
+            } else if (label.toString() === "Corner Kicks") {
+              final_data.push({
+                data_point: label,
+                home_value: data.Home_Corner_Kicks,
+                away_value: data.Away_Corner_Kicks,
+              });
+            } else if (label.toString() === "Possessions") {
+              final_data.push({
+                data_point: label,
+                home_value: data.Home_Possessions,
+                away_value: data.Away_Possessions,
+              });
+            }
+          });
+        });
+        let width = window.innerWidth * 0.5 * 0.75 * 0.5;
+        let labelArea = window.innerWidth * 0.5 * 0.25;
+        let bar_height = 10;
+        let height = bar_height * 50;
+        var rightOffset = width + labelArea;
+        var lCol = "home_value";
+        var rCol = "away_value";
+        var xFrom = d3.scale.linear().range([0, width]);
+        var xTo = d3.scale.linear().range([0, width]);
+        var y = d3.scale.ordinal().rangeBands([20, height]);
+
+        let data = final_data;
+
+        d3.select("#summaryChart").remove();
+
+        var chart = d3
+          .select("#summaryChartHolder")
+          .append("svg")
+          .attr("class", "chart")
+          .attr("width", labelArea + width + width)
+          .attr("height", height)
+          .attr("id", "summaryChart");
+
+        xFrom.domain(
+          d3.extent(data, function (d) {
+            return d[lCol] * 2;
           })
-          .catch((err) => {
-            alert(
-              "We don't have enough data to make this visual, please go back and select another node."
-            );
+        );
+        xTo.domain(
+          d3.extent(data, function (d) {
+            return d[rCol] * 2;
+          })
+        );
+
+        y.domain(
+          data.map(function (d) {
+            return d.data_point;
+          })
+        );
+
+        var yPosByIndex = function (d) {
+          return y(d.data_point);
+        };
+
+        chart
+          .selectAll("rect.left")
+          .data(data)
+          .enter()
+          .append("rect")
+          .attr("x", function (d) {
+            return width - xFrom(d[lCol]);
+          })
+          .attr("y", yPosByIndex)
+          .attr("class", "left")
+          .attr("width", function (d) {
+            return xFrom(d[lCol]);
+          })
+          .attr("height", y.rangeBand())
+          .on("dblclick", function (d, i) {
+            createTable(final_cols[i], d, htn, "home");
+          });
+
+        chart
+          .selectAll("text.leftscore")
+          .data(data)
+          .enter()
+          .append("text")
+          .attr("x", function (d) {
+            return width - xFrom(d[lCol]) - 40;
+          })
+          .attr("y", function (d) {
+            return y(d.data_point) + y.rangeBand() / 2;
+          })
+          .attr("dx", "20")
+          .attr("dy", ".36em")
+          .attr("text-anchor", "end")
+          .attr("class", "leftscore")
+          .text(function (d) {
+            return d[lCol];
+          });
+
+        chart
+          .selectAll("text.name")
+          .data(data)
+          .enter()
+          .append("text")
+          .attr("x", labelArea / 2 + width)
+          .attr("y", function (d) {
+            return y(d.data_point) + y.rangeBand() / 2;
+          })
+          .attr("dy", ".20em")
+          .attr("text-anchor", "middle")
+          .attr("class", "name")
+          .text(function (d) {
+            return d.data_point;
+          });
+
+        chart
+          .selectAll("rect.right")
+          .data(data)
+          .enter()
+          .append("rect")
+          .attr("x", rightOffset)
+          .attr("y", yPosByIndex)
+          .attr("class", "right")
+          .attr("width", function (d) {
+            return xTo(d[rCol]);
+          })
+          .attr("height", y.rangeBand())
+          .on("dblclick", function (d, i) {
+            createTable(final_cols[i], d, atn, "away");
+          });
+
+        chart
+          .selectAll("text.score")
+          .data(data)
+          .enter()
+          .append("text")
+          .attr("x", function (d) {
+            return xTo(d[rCol]) + rightOffset + 40;
+          })
+          .attr("y", function (d) {
+            return y(d.data_point) + y.rangeBand() / 2;
+          })
+          .attr("dx", -5)
+          .attr("dy", ".36em")
+          .attr("text-anchor", "end")
+          .attr("class", "score")
+          .text(function (d) {
+            return d[rCol];
+          });
+
+        chart
+          .append("text")
+          .attr("x", width / 3)
+          .attr("y", 10)
+          .attr("font-weight", 700)
+          .attr("class", "title")
+          .text("Home Team");
+
+        chart
+          .append("text")
+          .attr("x", width / 3 + rightOffset)
+          .attr("y", 10)
+          .attr("font-weight", 700)
+          .attr("class", "title")
+          .text("Away Team");
+
+        chart
+          .append("text")
+          .attr("x", width + labelArea / 3)
+          .attr("y", 10)
+          .attr("font-weight", 700)
+          .attr("class", "title")
+          .text("Statistics");
+      }
+
+      function createTable(statName, statValue, team_name, homeoraway) {
+        if (homeoraway === "home") {
+          statValue = statValue.home_value;
+        } else {
+          statValue = statValue.away_value;
+        }
+        statValue = statValue;
+        var dict = new Map();
+        match_id_collection = [];
+        matchesJson.forEach(function (data) {
+          if (
+            data.season.toString() === yearValue.toString() &&
+            data.league_id.toString() === league_id.toString() &&
+            (data.home_team_name.toString() === team_name.toString() ||
+              data.away_team_name.toString() === team_name.toString())
+          ) {
+            if (data.home_team_name.toString() === team_name.toString()) {
+              dict.set(data.match_api_id, "home");
+            } else {
+              dict.set(data.match_api_id, "away");
+            }
+            match_id_collection.push(data.match_api_id.toString());
+          }
+        });
+
+        filtered_match_stat = [];
+        matchStatsCsv.forEach(function (data) {
+          if (match_id_collection.includes(data.match_id.toString()) === true) {
+            filtered_match_stat.push(data);
+          }
+        });
+
+        let tableFormat = [];
+        matchesJson.forEach(function (data) {
+          if (
+            match_id_collection.includes(data.match_api_id.toString()) === true
+          ) {
+            if (dict.get(data.match_api_id) === "home") {
+              filtered_match_stat.forEach(function (inner) {
+                if (
+                  inner.match_id.toString() === data.match_api_id.toString()
+                ) {
+                  if (statName.toString() === "Goals") {
+                    if (
+                      parseInt(data.home_team_goal) >=
+                        parseInt(data.away_team_goal) &&
+                      inner.Home_Goals.toString() === statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "win",
+                      });
+                    } else if (
+                      parseInt(data.home_team_goal) <=
+                        parseInt(data.away_team_goal) &&
+                      inner.Home_Goals.toString() === statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "loss",
+                      });
+                    }
+                  } else if (statName.toString() === "Shots on Goal") {
+                    if (
+                      parseInt(data.home_team_goal) >=
+                        parseInt(data.away_team_goal) &&
+                      inner.Home_Shots_on_Goal.toString() ===
+                        statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "win",
+                      });
+                    } else if (
+                      parseInt(data.home_team_goal) <=
+                        parseInt(data.away_team_goal) &&
+                      inner.Home_Shots_on_Goal.toString() ===
+                        statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "loss",
+                      });
+                    }
+                  } else if (statName.toString() === "Shots off Goal") {
+                    if (
+                      parseInt(data.home_team_goal) >=
+                        parseInt(data.away_team_goal) &&
+                      inner.Home_Shots_off_Goal.toString() ===
+                        statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "win",
+                      });
+                    } else if (
+                      parseInt(data.home_team_goal) <=
+                        parseInt(data.away_team_goal) &&
+                      inner.Home_Shots_off_Goal.toString() ===
+                        statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "loss",
+                      });
+                    }
+                  } else if (statName.toString() === "Fouls Committed") {
+                    if (
+                      parseInt(data.home_team_goal) >=
+                        parseInt(data.away_team_goal) &&
+                      inner.Home_Fouls_Committed.toString() ===
+                        statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "win",
+                      });
+                    } else if (
+                      parseInt(data.home_team_goal) <=
+                        parseInt(data.away_team_goal) &&
+                      inner.Home_Fouls_Committed.toString() ===
+                        statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "loss",
+                      });
+                    }
+                  } else if (statName.toString() === "Yellow/Red Cards") {
+                    if (
+                      parseInt(data.home_team_goal) >=
+                        parseInt(data.away_team_goal) &&
+                      inner.Home_Yellow_Red_Cards.toString() ===
+                        statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "win",
+                      });
+                    } else if (
+                      parseInt(data.home_team_goal) <=
+                        parseInt(data.away_team_goal) &&
+                      inner.Home_Yellow_Red_Cards.toString() ===
+                        statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "loss",
+                      });
+                    }
+                  } else if (statName.toString() === "Crosses") {
+                    if (
+                      data.home_team_goal >= data.away_team_goal &&
+                      inner.Home_Crosses.toString() === statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "win",
+                      });
+                    } else if (
+                      data.home_team_goal <= data.away_team_goal &&
+                      inner.Home_Crosses.toString() === statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "loss",
+                      });
+                    }
+                  } else if (statName.toString() === "Corner Kicks") {
+                    if (
+                      data.home_team_goal >= data.away_team_goal &&
+                      inner.Home_Corner_Kicks.toString() ===
+                        statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "win",
+                      });
+                    } else if (
+                      data.home_team_goal <= data.away_team_goal &&
+                      inner.Home_Corner_Kicks.toString() ===
+                        statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "loss",
+                      });
+                    }
+                  } else if (statName.toString() === "Possessions") {
+                    if (
+                      data.home_team_goal >= data.away_team_goal &&
+                      inner.Home_Possessions.toString() === statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "win",
+                      });
+                    } else if (
+                      data.home_team_goal <= data.away_team_goal &&
+                      inner.Home_Possessions.toString() === statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "loss",
+                      });
+                    }
+                  }
+                }
+              });
+            } else if (dict.get(data.match_api_id) === "away") {
+              filtered_match_stat.forEach(function (inner) {
+                if (
+                  inner.match_id.toString() === data.match_api_id.toString()
+                ) {
+                  if (statName.toString() === "Goals") {
+                    if (
+                      data.away_team_goal >= data.home_team_goal &&
+                      inner.Away_Goals.toString() === statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "win",
+                      });
+                    } else if (
+                      data.away_team_goal <= data.home_team_goal &&
+                      inner.Away_Goals.toString() === statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "loss",
+                      });
+                    }
+                  } else if (statName.toString() === "Shots on Goal") {
+                    if (
+                      data.away_team_goal >= data.home_team_goal &&
+                      inner.Away_Shots_on_Goal.toString() ===
+                        statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "win",
+                      });
+                    } else if (
+                      data.away_team_goal <= data.home_team_goal &&
+                      inner.Away_Shots_on_Goal.toString() ===
+                        statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "loss",
+                      });
+                    }
+                  } else if (statName.toString() === "Shots off Goal") {
+                    if (
+                      data.away_team_goal >= data.home_team_goal &&
+                      inner.Away_Shots_off_Goal.toString() ===
+                        statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "win",
+                      });
+                    } else if (
+                      data.away_team_goal <= data.home_team_goal &&
+                      inner.Away_Shots_off_Goal.toString() ===
+                        statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "loss",
+                      });
+                    }
+                  } else if (statName.toString() === "Fouls Committed") {
+                    if (
+                      data.away_team_goal >= data.home_team_goal &&
+                      inner.Away_Fouls_Committed.toString() ===
+                        statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "win",
+                      });
+                    } else if (
+                      data.away_team_goal <= data.home_team_goal &&
+                      inner.Away_Fouls_Committed.toString() ===
+                        statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "loss",
+                      });
+                    }
+                  } else if (statName.toString() === "Yellow/Red Cards") {
+                    if (
+                      data.away_team_goal >= data.home_team_goal &&
+                      inner.Away_Yellow_Red_Cards.toString() ===
+                        statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "win",
+                      });
+                    } else if (
+                      data.away_team_goal <= data.home_team_goal &&
+                      inner.Away_Yellow_Red_Cards.toString() ===
+                        statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "loss",
+                      });
+                    }
+                  } else if (statName.toString() === "Crosses") {
+                    if (
+                      data.away_team_goal >= data.home_team_goal &&
+                      inner.Away_Crosses.toString() === statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "win",
+                      });
+                    } else if (
+                      data.away_team_goal <= data.home_team_goal &&
+                      inner.Away_Crosses.toString() === statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "loss",
+                      });
+                    }
+                  } else if (statName.toString() === "Corner Kicks") {
+                    if (
+                      data.away_team_goal >= data.home_team_goal &&
+                      inner.Away_Corner_Kicks.toString() ===
+                        statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "win",
+                      });
+                    } else if (
+                      data.away_team_goal <= data.home_team_goal &&
+                      inner.Away_Corner_Kicks.toString() ===
+                        statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "loss",
+                      });
+                    }
+                  } else if (statName.toString() === "Possessions") {
+                    if (
+                      data.away_team_goal >= data.home_team_goal &&
+                      inner.Away_Possessions.toString() === statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "win",
+                      });
+                    } else if (
+                      data.away_team_goal <= data.home_team_goal &&
+                      inner.Away_Possessions.toString() === statValue.toString()
+                    ) {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "loss",
+                      });
+                    }
+                  }
+                }
+              });
+            }
+          }
+        });
+        let data = tableFormat;
+        d3.select("#tableViz").remove();
+        var table = d3
+          .select("#summaryChartInteractionHolder")
+          .append("table")
+          .attr("id", "tableViz");
+        var thead = table.append("thead");
+        var tbody = table.append("tbody");
+        columns = ["match_id", "outcome"];
+
+        thead
+          .append("tr")
+          .selectAll("th")
+          .data(columns)
+          .enter()
+          .append("th")
+          .text(function (column) {
+            return column;
+          });
+
+        var rows = tbody.selectAll("tr").data(data).enter().append("tr");
+
+        var cells = rows
+          .selectAll("td")
+          .data(function (row) {
+            return columns.map(function (column) {
+              return { column: column, value: row[column] };
+            });
+          })
+          .enter()
+          .append("td")
+          .text(function (d) {
+            return d.value;
           });
       }
 
@@ -1054,12 +1828,16 @@
         mainElemen.style.display = origDisplayStyle;
         document.getElementById("pyplotfigure").src = "#";
         document.getElementById("pandasfigure").src = "#";
+        var div = document.getElementById("errorholder");
+        div.innerHTML = "";
+        d3.select("#tableViz").remove();
       }
 
       function loadPythonLibs() {
         languagePluginLoader.then(() => {
           pyodide.loadPackage(["matplotlib", "pandas"]).then(() => {
             pyodideReady = 1;
+            xw;
           });
         });
       }
