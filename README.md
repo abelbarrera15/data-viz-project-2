@@ -20,3 +20,7 @@ Potentially we can do a number for a line to represent the margin of win, but th
 
 Also potentially -- we could do left to right representation such that the team that is at the top most line of the graph has won the most and the match at the bottom has lost
 the most. We need to think about this more.
+
+FINAL NOTE:
+
+matches.json and player_attr.csv are either incomplete or don't exist plesae downlaod from the sql lite db that the documentation tells you the data is avalilable in for the visual to fully work
