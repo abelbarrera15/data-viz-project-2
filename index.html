@@ -67,8 +67,85 @@
     .chart text.title {
       fill: #2216ff;
     }
+
+    .main {
+      height: 100px;
+    }
+
+    .heading {
+      color: white;
+        font-family: "Century Gothic", cursive; 
+        font-size: 20px;
+        line-height: 10px; 
+        font-weight: normal;
+        text-align: center; 
+        text-shadow: 0 10px 10px white;
+    }
+
+    .header-img {
+      width: 100%;
+      height: 130px;
+      background: url("soccer2.jpg");
+      background-size: cover;
+    }
+    
+    .links {
+      text-align: center;
+    }
+
+    .doc_button {
+      color: #494949 !important;
+      text-transform: uppercase;
+      text-decoration: none;
+      background: #ffffff;
+      padding: 6px;
+      border: 4px solid green !important;
+      display: inline-block;
+      text-align: justify;
+      font-size: 12px;
+      transition: all 0.4s ease 0s;
+      }
+
+    .doc_button:hover {
+      color: #ffffff !important;
+      background: navy;
+      border-color: navy !important;
+      transition: all 0.4s ease 0s;
+      }      
+
+    .youtube_button {
+      color: #494949 !important;
+      text-transform: uppercase;
+      text-decoration: none;
+      background: #ffffff;
+      padding: 6px;
+      border: 4px solid green !important;
+      display: inline-block;
+      width: 110px;
+      text-align: center;
+      font-size: 12px;
+      transition: all 0.4s ease 0s;
+      }
+
+    .youtube_button:hover {
+      color: #ffffff !important;
+      background: navy;
+      border-color: navy !important;
+      transition: all 0.4s ease 0s;
+      }  
+
+    .instructions {
+      text-align: center;
+      font-size: 5px;
+	    font-family:Arial, Helvetica, sans-serif;
+      color: navy;
+      margin-left: 15%;
+      margin-right: 15%;
+    }
+
   </style>
   <head>
+    <title>H517 Project 2</title>
     <!-- Latest compiled CSS v3.4.1 -->
     <link
       rel="stylesheet"
@@ -90,6 +167,27 @@
     <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.10/lodash.min.js"></script>
   </head>
   <body>
+    <main>
+      <div class="header-img">
+        <br>
+        <div class="heading">
+        <h1>European Soccer Match Ups</h1>
+      </div>  
+      <div class = "links">
+        <div class = "button_cont">
+          <form>
+            <button class = "doc_button" type="submit" formaction="documentation.html" target="_blank" rel="nofollow noopener">Documentation</button>
+          <button class = "youtube_button" type="submit" formaction="https://youtu.be/Vj2xS_baGK8" target="_blank" rel="nofollow noopener">Youtube</button>
+        </form>
+        </div>
+      </div>
+    </div><div class= "instructions">
+      <h5>Instructions: After filling out the drop down selections on the left, hover over each node to see game match
+         details. Nodes with a yellow box are matches between the two teams selected. 
+         Double click on the node to drill down more stats from the match. In drill down horizontal graphs, 
+         double click on bars to see additional stats.</h5>
+    </div>
+    </main>
     <div class="row" id="overview">
       <div class="col-sm-3">
         <div style="padding-top: 10px; padding-left: 10px">
@@ -490,12 +588,12 @@
           .attr("refX", 13)
           .attr("refY", 0)
           .attr("orient", "auto")
-          .attr("markerWidth", 8)
-          .attr("markerHeight", 8)
+          .attr("markerWidth", 3)
+          .attr("markerHeight", 3)
           .attr("xoverflow", "visible")
           .append("svg:path")
           .attr("d", "M 0,-5 L 10 ,0 L 0,5")
-          .attr("fill", "#999")
+          .attr("fill", "#000000")
           .style("stroke", "none");
 
         var json = node_data;
@@ -535,6 +633,7 @@
               return "#ff0000";
             }
           })
+          .attr("stroke-width", 3)
           .attr("marker-end", "url(#arrowhead)");
 
         var nodeTip = d3
@@ -721,7 +820,7 @@
           .attr("orient", "auto")
           .append("path")
           .attr("d", "M 0 0 12 6 0 12 3 6")
-          .attr("fill", "#999")
+          .attr("fill", "#00000")
           .style("stroke", "none");
 
         legend_links
@@ -1392,7 +1491,7 @@
           .attr("y", 10)
           .attr("font-weight", 700)
           .attr("class", "title")
-          .text("Home Team");
+          .text(htn);
 
         chart
           .append("text")
@@ -1400,7 +1499,7 @@
           .attr("y", 10)
           .attr("font-weight", 700)
           .attr("class", "title")
-          .text("Away Team");
+          .text(atn);
 
         chart
           .append("text")
@@ -1455,7 +1554,7 @@
                 ) {
                   if (statName.toString() === "Goals") {
                     if (
-                      parseInt(data.home_team_goal) >=
+                      parseInt(data.home_team_goal) >
                         parseInt(data.away_team_goal) &&
                       inner.Home_Goals.toString() === statValue.toString()
                     ) {
@@ -1464,18 +1563,24 @@
                         outcome: "win",
                       });
                     } else if (
-                      parseInt(data.home_team_goal) <=
+                      parseInt(data.home_team_goal) <
                         parseInt(data.away_team_goal) &&
                       inner.Home_Goals.toString() === statValue.toString()
                     ) {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "loss",
+                      });
+                    }
+                    else {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "tie",
                       });
                     }
                   } else if (statName.toString() === "Shots on Goal") {
                     if (
-                      parseInt(data.home_team_goal) >=
+                      parseInt(data.home_team_goal) >
                         parseInt(data.away_team_goal) &&
                       inner.Home_Shots_on_Goal.toString() ===
                         statValue.toString()
@@ -1485,7 +1590,7 @@
                         outcome: "win",
                       });
                     } else if (
-                      parseInt(data.home_team_goal) <=
+                      parseInt(data.home_team_goal) <
                         parseInt(data.away_team_goal) &&
                       inner.Home_Shots_on_Goal.toString() ===
                         statValue.toString()
@@ -1493,11 +1598,17 @@
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "loss",
+                      });
+                    }
+                    else {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "tie",
                       });
                     }
                   } else if (statName.toString() === "Shots off Goal") {
                     if (
-                      parseInt(data.home_team_goal) >=
+                      parseInt(data.home_team_goal) >
                         parseInt(data.away_team_goal) &&
                       inner.Home_Shots_off_Goal.toString() ===
                         statValue.toString()
@@ -1507,7 +1618,7 @@
                         outcome: "win",
                       });
                     } else if (
-                      parseInt(data.home_team_goal) <=
+                      parseInt(data.home_team_goal) <
                         parseInt(data.away_team_goal) &&
                       inner.Home_Shots_off_Goal.toString() ===
                         statValue.toString()
@@ -1515,11 +1626,17 @@
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "loss",
+                      });
+                    }
+                    else {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "tie",
                       });
                     }
                   } else if (statName.toString() === "Fouls Committed") {
                     if (
-                      parseInt(data.home_team_goal) >=
+                      parseInt(data.home_team_goal) >
                         parseInt(data.away_team_goal) &&
                       inner.Home_Fouls_Committed.toString() ===
                         statValue.toString()
@@ -1529,7 +1646,7 @@
                         outcome: "win",
                       });
                     } else if (
-                      parseInt(data.home_team_goal) <=
+                      parseInt(data.home_team_goal) <
                         parseInt(data.away_team_goal) &&
                       inner.Home_Fouls_Committed.toString() ===
                         statValue.toString()
@@ -1537,11 +1654,17 @@
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "loss",
+                      });
+                    }
+                    else {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "tie",
                       });
                     }
                   } else if (statName.toString() === "Yellow/Red Cards") {
                     if (
-                      parseInt(data.home_team_goal) >=
+                      parseInt(data.home_team_goal) >
                         parseInt(data.away_team_goal) &&
                       inner.Home_Yellow_Red_Cards.toString() ===
                         statValue.toString()
@@ -1551,7 +1674,7 @@
                         outcome: "win",
                       });
                     } else if (
-                      parseInt(data.home_team_goal) <=
+                      parseInt(data.home_team_goal) <
                         parseInt(data.away_team_goal) &&
                       inner.Home_Yellow_Red_Cards.toString() ===
                         statValue.toString()
@@ -1559,11 +1682,17 @@
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "loss",
+                      });
+                    }
+                    else {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "tie",
                       });
                     }
                   } else if (statName.toString() === "Crosses") {
                     if (
-                      data.home_team_goal >= data.away_team_goal &&
+                      data.home_team_goal > data.away_team_goal &&
                       inner.Home_Crosses.toString() === statValue.toString()
                     ) {
                       tableFormat.push({
@@ -1571,17 +1700,23 @@
                         outcome: "win",
                       });
                     } else if (
-                      data.home_team_goal <= data.away_team_goal &&
+                      data.home_team_goal < data.away_team_goal &&
                       inner.Home_Crosses.toString() === statValue.toString()
                     ) {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "loss",
+                      });
+                    }
+                    else {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "tie",
                       });
                     }
                   } else if (statName.toString() === "Corner Kicks") {
                     if (
-                      data.home_team_goal >= data.away_team_goal &&
+                      data.home_team_goal > data.away_team_goal &&
                       inner.Home_Corner_Kicks.toString() ===
                         statValue.toString()
                     ) {
@@ -1590,7 +1725,7 @@
                         outcome: "win",
                       });
                     } else if (
-                      data.home_team_goal <= data.away_team_goal &&
+                      data.home_team_goal < data.away_team_goal &&
                       inner.Home_Corner_Kicks.toString() ===
                         statValue.toString()
                     ) {
@@ -1599,9 +1734,15 @@
                         outcome: "loss",
                       });
                     }
+                    else {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "tie",
+                      });
+                    }
                   } else if (statName.toString() === "Possessions") {
                     if (
-                      data.home_team_goal >= data.away_team_goal &&
+                      data.home_team_goal > data.away_team_goal &&
                       inner.Home_Possessions.toString() === statValue.toString()
                     ) {
                       tableFormat.push({
@@ -1609,12 +1750,18 @@
                         outcome: "win",
                       });
                     } else if (
-                      data.home_team_goal <= data.away_team_goal &&
+                      data.home_team_goal < data.away_team_goal &&
                       inner.Home_Possessions.toString() === statValue.toString()
                     ) {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "loss",
+                      });
+                    }
+                    else {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "tie",
                       });
                     }
                   }
@@ -1627,7 +1774,7 @@
                 ) {
                   if (statName.toString() === "Goals") {
                     if (
-                      data.away_team_goal >= data.home_team_goal &&
+                      data.away_team_goal > data.home_team_goal &&
                       inner.Away_Goals.toString() === statValue.toString()
                     ) {
                       tableFormat.push({
@@ -1635,17 +1782,23 @@
                         outcome: "win",
                       });
                     } else if (
-                      data.away_team_goal <= data.home_team_goal &&
+                      data.away_team_goal < data.home_team_goal &&
                       inner.Away_Goals.toString() === statValue.toString()
                     ) {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "loss",
+                      });
+                    }
+                    else {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "tie",
                       });
                     }
                   } else if (statName.toString() === "Shots on Goal") {
                     if (
-                      data.away_team_goal >= data.home_team_goal &&
+                      data.away_team_goal > data.home_team_goal &&
                       inner.Away_Shots_on_Goal.toString() ===
                         statValue.toString()
                     ) {
@@ -1654,18 +1807,24 @@
                         outcome: "win",
                       });
                     } else if (
-                      data.away_team_goal <= data.home_team_goal &&
+                      data.away_team_goal < data.home_team_goal &&
                       inner.Away_Shots_on_Goal.toString() ===
                         statValue.toString()
                     ) {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "loss",
+                      });
+                    }
+                    else {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "tie",
                       });
                     }
                   } else if (statName.toString() === "Shots off Goal") {
                     if (
-                      data.away_team_goal >= data.home_team_goal &&
+                      data.away_team_goal > data.home_team_goal &&
                       inner.Away_Shots_off_Goal.toString() ===
                         statValue.toString()
                     ) {
@@ -1674,18 +1833,24 @@
                         outcome: "win",
                       });
                     } else if (
-                      data.away_team_goal <= data.home_team_goal &&
+                      data.away_team_goal < data.home_team_goal &&
                       inner.Away_Shots_off_Goal.toString() ===
                         statValue.toString()
                     ) {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "loss",
+                      });
+                    }
+                    else {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "tie",
                       });
                     }
                   } else if (statName.toString() === "Fouls Committed") {
                     if (
-                      data.away_team_goal >= data.home_team_goal &&
+                      data.away_team_goal > data.home_team_goal &&
                       inner.Away_Fouls_Committed.toString() ===
                         statValue.toString()
                     ) {
@@ -1694,18 +1859,24 @@
                         outcome: "win",
                       });
                     } else if (
-                      data.away_team_goal <= data.home_team_goal &&
+                      data.away_team_goal < data.home_team_goal &&
                       inner.Away_Fouls_Committed.toString() ===
                         statValue.toString()
                     ) {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "loss",
+                      });
+                    }
+                    else {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "tie",
                       });
                     }
                   } else if (statName.toString() === "Yellow/Red Cards") {
                     if (
-                      data.away_team_goal >= data.home_team_goal &&
+                      data.away_team_goal > data.home_team_goal &&
                       inner.Away_Yellow_Red_Cards.toString() ===
                         statValue.toString()
                     ) {
@@ -1714,18 +1885,24 @@
                         outcome: "win",
                       });
                     } else if (
-                      data.away_team_goal <= data.home_team_goal &&
+                      data.away_team_goal < data.home_team_goal &&
                       inner.Away_Yellow_Red_Cards.toString() ===
                         statValue.toString()
                     ) {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "loss",
+                      });
+                    }
+                    else {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "tie",
                       });
                     }
                   } else if (statName.toString() === "Crosses") {
                     if (
-                      data.away_team_goal >= data.home_team_goal &&
+                      data.away_team_goal > data.home_team_goal &&
                       inner.Away_Crosses.toString() === statValue.toString()
                     ) {
                       tableFormat.push({
@@ -1733,17 +1910,23 @@
                         outcome: "win",
                       });
                     } else if (
-                      data.away_team_goal <= data.home_team_goal &&
+                      data.away_team_goal < data.home_team_goal &&
                       inner.Away_Crosses.toString() === statValue.toString()
                     ) {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "loss",
+                      });
+                    }
+                    else {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "tie",
                       });
                     }
                   } else if (statName.toString() === "Corner Kicks") {
                     if (
-                      data.away_team_goal >= data.home_team_goal &&
+                      data.away_team_goal > data.home_team_goal &&
                       inner.Away_Corner_Kicks.toString() ===
                         statValue.toString()
                     ) {
@@ -1752,7 +1935,7 @@
                         outcome: "win",
                       });
                     } else if (
-                      data.away_team_goal <= data.home_team_goal &&
+                      data.away_team_goal < data.home_team_goal &&
                       inner.Away_Corner_Kicks.toString() ===
                         statValue.toString()
                     ) {
@@ -1761,9 +1944,15 @@
                         outcome: "loss",
                       });
                     }
+                    else {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "tie",
+                      });
+                    }
                   } else if (statName.toString() === "Possessions") {
                     if (
-                      data.away_team_goal >= data.home_team_goal &&
+                      data.away_team_goal > data.home_team_goal &&
                       inner.Away_Possessions.toString() === statValue.toString()
                     ) {
                       tableFormat.push({
@@ -1771,12 +1960,18 @@
                         outcome: "win",
                       });
                     } else if (
-                      data.away_team_goal <= data.home_team_goal &&
+                      data.away_team_goal < data.home_team_goal &&
                       inner.Away_Possessions.toString() === statValue.toString()
                     ) {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "loss",
+                      });
+                    }
+                    else {
+                      tableFormat.push({
+                        match_id: inner.match_id,
+                        outcome: "tie",
                       });
                     }
                   }
@@ -1837,7 +2032,6 @@
         languagePluginLoader.then(() => {
           pyodide.loadPackage(["matplotlib", "pandas"]).then(() => {
             pyodideReady = 1;
-            xw;
           });
         });
       }

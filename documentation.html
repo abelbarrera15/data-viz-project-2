@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+    <style>
+
+        .button {
+            font-size: 18px;
+        }
+
+        .title {
+        color: darkblue;
+        font-family: "Century Gothic", cursive; 
+        font-size: 20px; 
+        line-height: 10px; 
+        font-weight: normal;
+        text-align: center; 
+        text-shadow: 0 5px 5px rgb(160, 146, 146);
+        }
+
+        .about {
+            text-align: center;
+            padding-left: 130px;
+            padding-right: 130px;
+            font-size: 17px;
+        }
+
+        .documentation {
+            float: center;
+            width: 70%;
+            padding-left: 250px;
+            padding-right: 70px;
+            font-size: 15px;
+            font-family:Arial, Helvetica, sans-serif
+        }
+
+        .sketches {
+            padding-left: 20%;
+            float: center;
+        }
+
+        .drilldown{
+            padding-left: 30%;
+            float: center;
+        }
+
+        hr.style-four {
+        height: 12px;
+        border: 0;
+        box-shadow: inset 0 12px 12px -12px rgba(0, 0, 0, 0.5);
+        }
+
+    </style>
+    <head>
+        <meta charset="utf-8">
+        <title>Project 2 - Documentation Page</title>
+        <link href="index.html" rel="stylesheet">
+    </head>
+    <body>
+        <div class="button">
+            <a href="index.html">Go Back</a>
+        </div>
+        <div class="title">
+        <h2>Documenation Page</h2>
+        </div>
+        <div class="about">
+        <p><strong>Project Type: Design Study </strong><br/><p>
+        <p><strong>Group members: Abel Barrera, Demi Johnson, Gabriel Wachowski, and Joseph Holt </strong><br/><p>       
+        </div>
+        <hr class = "style-four">
+        </div>
+        <div class="documentation">
+        <h4>Data Link:</h4><a href= "https://www.kaggle.com/hugomathien/soccer">European Soccer Database</a>
+        <h4>About Dataset</h4>
+        <p>This dataset contains team, player, and match data for European Professional Soccer from seasons 2008-2016. 
+            There are 7 datasets in total that each relate with a key, either country, match, team id, etc. The datasets 
+            included are Country, League, Match, Player, Player_attributes, Team, and Team_attributes.</p>
+        <p>For the team and player data, there are columns of quantitative and qualitative data. Some examples of the 
+            qualitative data are included in player_attributes and team_attributes such as a players preferred_foot, 
+            attacking_work_rate and defensive_work_rate along with a teams buildUpPlaySpeedClass, chanceCreationPassingClass
+             and others. </p> 
+        <h4>Initial Questions:</h4>
+        <li>What are the attributes of winning teams? 
+        </li>
+        <li>What are the qualities for specific players that contribute to a team’s win? 
+        </li>
+        <li>How can you visualize a whole season?
+        </li>
+        <li>How big was the margin of a win? 
+        </li>
+        <li>What, from a data perspective, does a large margin win look like vs. a small margin win?
+        </li>
+        <li>How do the in-game stats compare for each match?
+        </li>
+        <h3>Design</h3>
+        <h4>Nodal Graph</h4>
+        <p>As seen in the image below, we had the idea to create nodes that will represent a
+             match. You start the visualization by filtering for league, season, and two teams. We 
+             did this filtering because the graph would be too large and busy to be well understood.
+              We played around with it but felt these filters gave us the best and most meaningful visual.</p>
+        <p>Each node is a match shown by the two participating team logos. Every node is at least one 
+            of the two teams filtered at the beginning. This creates a web for all the games played 
+            by two teams in one league in a single season. We created a yellow box around the node 
+            for when the two teams selected play each other. The arrows between the two teams represent 
+            a match up. The arrows are color coordinated to the match outcome; blue is a win, red is 
+            a loss, and gray is a tie.</p>
+        <div class="sketches">
+            <img src="node.jpg" width="300" height="400">
+        </div>
+        <p>The nodal graph answers the question of how to visualize an entire season. This graph can 
+            also answer the question of if momentum could affect match outcomes. </p>
+        <div class="sketches">
+            <img src="node2.jpg" width="700" height="400">
+        </div>
+        <h4>Drill Down Graphs</h4>
+        <p>Our goal is to add additional drill down or attribute items to the nodal graph. Within each 
+            match of the overall graph, we wanted to create hover over abilities to show key indicators
+             (comparing team attributes), players who made large impacts, and additional important 
+             factors of the game. </p>
+        <p>The first drill down graph is a radar graph designed to show the comparison between the two 
+            teams in a match. The graph allows for a person to have a visual representation of the team's
+             differences in their style of play. This allows us to answer the question of what are the
+              attributes of a winning team.</p>
+        <p>The different types of play include:</p>
+        <li>buildUpPlaySpeed</li>
+        <li>buildUpPlayPassing</li>
+        <li>chanceCreationPassing</li>
+        <li>chanceCreationShooting</li>
+        <li>chanceCreationCrossing</li>
+        <li>defencePressure</li>
+        <li>defenceAggression</li>
+        <li>defenceTeamWidth</li>
+        <div class= "drilldown">
+        <img src="drilldown.jpg" width="450" height="300">
+        </div>
+        <p>These attributes have a numeric value that is given in the original dataset. We created
+             a function that takes in the match id based on which node you click on in our original
+              node graph.</p>
+        <p>The next drill down graph shown below the radar graph is a comparison of the two best players
+             on the participating teams, determined by which players had the highest overall rating scores 
+             for that match. With the given player attribute data, we decided that, besides the overall
+              rating, the attributes that contribute to a highly rated player include acceleration, vision,
+               jumping, and stamina. These attributes are gathered from the date of the match (as the 
+               dataset contains attribute data for players over time) and compared visually with a bar
+                chart. They are split by team, so the home team is on the left and away team is on the
+                 right. Comparing each team's top player performance provides some additional insight
+                  to a match. This graph appears along with the radar graph when a match is clicked on.
+                   We decided on the colors taking into consideration colorblindness. We had started
+                    with blue, orange, green, red, and purple but decided the blue, maroon, green, yellow,
+                     and dark blue was easier to distinguish across all types of colorblindness.</p>
+        <div class= "drilldown">
+            <img src="drilldown2.jpg" width="600" height="350">
+        </div>
+        <p>The last drill down graph is actually two visuals. Along with the two visuals previously mentioned, when you
+             click on a specific match on the node graph, you will see a bidirectional bar chart on the
+              right. This bar chart shows the in-game statistics from the selected match. The in-game 
+              statistics include:</p>
+        <ul>
+        <li>Goals</li>
+         <li>Shots on Goal</li>
+        <li>Shots off Goal</li>
+        <li>Possessions</li>
+        <li>Crosses</li>
+        <li>Corner Kicks</li>
+        <li>Penalties</li>
+        <li>Cards (Yellow and Red)</li>
+        <div class= "drilldown">
+            <img src="drilldown3.jpg" width="400" height="300">
+            <img src="drilldown4.jpg" width="80" height="300">
+        </div>
+        </ul>
+        <p>These in-game stats allow us to see the specifics of the match and another aspect
+             of team play that contributes to a win or loss. Another aspect of this visual 
+             is that when you double click on a certain bar of this chart you will see when that team previous has that
+             exact stat in another game and whether they won, loss or tied. For example, when you double click on the bar
+            of Leicester City's "crosses", it will show other games where this team has 13 crosses and what the outcome was of that game.
+            The goal of that interaction is to show if that statistic, whether high or low, had an impact on the outcome of the game.
+         </p>
+        <h4>Color Choices</h4>
+        <p>When deciding on colors, we wanted to select symbolic and stereotypical colors for the nodes, lines, and charts. 
+                We also wanted to pick colors that will be visible for those users that are color blind or have 
+                color impaired vision. We used the color blindness simulator, <a href="http://colororacle.org/">Color Oracle</a> to test if the colors
+                 I chose would be sufficient with “Deuteranopia”, “Protanopia”, and “Tritanopia” color vision. 
+                 Color Oracle is a color tool recommended by Dr. Reda.</p>
+        <h4>References</h4>
+        <a href="https://docs.google.com/document/d/1onnKZkyu63bp0rcM1G1qZ81HfUT2IG5MmV9VBdbbWRs/edit">References</a>
+        </div>
+    </body>
+</html>   
