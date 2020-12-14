@@ -142,6 +142,16 @@
       margin-left: 15%;
       margin-right: 15%;
     }
+
+    .loaddiv {
+      width:"100%"
+    }
+
+    .gifdiv {
+      margin-left:auto;
+      margin-right:auto;
+      float :none;
+    }
   </style>
   <head>
     <title>H517 Project 2</title>
@@ -207,6 +217,10 @@
         </h5>
       </div>
     </main>
+    <div id="loader" class="loaddiv" style=" text-align: center;"> 
+      <h1>Loading...</h1> 
+    </br>
+      <img id="gifdiv" src="https://media.giphy.com/media/xTk9ZvMnbIiIew7IpW/giphy.gif"> </img> </div>
     <div class="row" id="overview">
       <div class="col-sm-3">
         <div style="padding-top: 10px; padding-left: 10px">
@@ -287,9 +301,18 @@
       let pyodideReady = 0;
       let yearValue;
       let matchStatsCsv;
+      let tempDisp = undefined;
 
       function getBaseData() {
         //reading the data
+
+        var mainElemen = document.getElementById("overview");
+        if (tempDisp === undefined) {
+          tempDisp = mainElemen.style.display;
+        }
+        mainElemen.style.display = "none";
+
+        //overview
 
         var PromiseWrapper = (xhr, d) =>
           new Promise((resolve) => xhr(d, (p) => resolve(p)));
@@ -335,6 +358,18 @@
           matchesJson = matchesJson_new;
           makeForm();
           loadPythonLibs();
+          function doStuff() {
+            if(pyodideReady===0) {
+              setTimeout(doStuff, 50);//wait 50 millisecnds then recheck
+              return;
+            }
+          else {
+            var loadElemen = document.getElementById("loader");
+            loadElemen.style.display = "none"
+            mainElemen.style.display = tempDisp
+          }
+          }
+        doStuff();
         });
       }
 
@@ -715,7 +750,7 @@
                   d.away_goals
               )
               .style("left", d3.event.pageX - 400 + "px")
-              .style("top", d3.event.pageY + "px");
+              .style("top", d3.event.pageY - 275 + "px");
           })
           .on("mouseout", function (d, i) {
             nodeTip.transition().duration("50").style("opacity", 0);
@@ -2062,6 +2097,16 @@
       function loadPythonLibs() {
         languagePluginLoader.then(() => {
           pyodide.loadPackage(["matplotlib", "pandas"]).then(() => {
+            pyodide.runPythonAsync(
+            `
+            import pandas as pd
+            import matplotlib.pyplot as plt
+            import numpy as np
+            from math import pi
+            import io
+            import base64
+            import re
+            import json`)
             pyodideReady = 1;
           });
         });
