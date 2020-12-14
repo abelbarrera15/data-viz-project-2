@@ -74,12 +74,12 @@
 
     .heading {
       color: white;
-        font-family: "Century Gothic", cursive; 
-        font-size: 20px;
-        line-height: 10px; 
-        font-weight: normal;
-        text-align: center; 
-        text-shadow: 0 10px 10px white;
+      font-family: "Century Gothic", cursive;
+      font-size: 20px;
+      line-height: 10px;
+      font-weight: normal;
+      text-align: center;
+      text-shadow: 0 10px 10px white;
     }
 
     .header-img {
@@ -88,7 +88,7 @@
       background: url("soccer2.jpg");
       background-size: cover;
     }
-    
+
     .links {
       text-align: center;
     }
@@ -104,14 +104,14 @@
       text-align: justify;
       font-size: 12px;
       transition: all 0.4s ease 0s;
-      }
+    }
 
     .doc_button:hover {
       color: #ffffff !important;
       background: navy;
       border-color: navy !important;
       transition: all 0.4s ease 0s;
-      }      
+    }
 
     .youtube_button {
       color: #494949 !important;
@@ -125,24 +125,33 @@
       text-align: center;
       font-size: 12px;
       transition: all 0.4s ease 0s;
-      }
+    }
 
     .youtube_button:hover {
       color: #ffffff !important;
       background: navy;
       border-color: navy !important;
       transition: all 0.4s ease 0s;
-      }  
+    }
 
     .instructions {
       text-align: center;
       font-size: 5px;
-	    font-family:Arial, Helvetica, sans-serif;
+      font-family: Arial, Helvetica, sans-serif;
       color: navy;
       margin-left: 15%;
       margin-right: 15%;
     }
 
+    .loaddiv {
+      width: "100%";
+    }
+
+    .gifdiv {
+      margin-left: auto;
+      margin-right: auto;
+      float: none;
+    }
   </style>
   <head>
     <title>H517 Project 2</title>
@@ -169,25 +178,52 @@
   <body>
     <main>
       <div class="header-img">
-        <br>
+        <br />
         <div class="heading">
-        <h1>European Soccer Match Ups</h1>
-      </div>  
-      <div class = "links">
-        <div class = "button_cont">
-          <form>
-            <button class = "doc_button" type="submit" formaction="documentation.html" target="_blank" rel="nofollow noopener">Documentation</button>
-          <button class = "youtube_button" type="submit" formaction="https://youtu.be/Vj2xS_baGK8" target="_blank" rel="nofollow noopener">Youtube</button>
-        </form>
+          <h1>European Soccer Match Ups</h1>
+        </div>
+        <div class="links">
+          <div class="button_cont">
+            <form>
+              <button
+                class="doc_button"
+                type="submit"
+                formaction="documentation.html"
+                target="_blank"
+                rel="nofollow noopener"
+              >
+                Documentation
+              </button>
+              <button
+                class="youtube_button"
+                type="submit"
+                formaction="https://youtu.be/Vj2xS_baGK8"
+                target="_blank"
+                rel="nofollow noopener"
+              >
+                Youtube
+              </button>
+            </form>
+          </div>
         </div>
       </div>
-    </div><div class= "instructions">
-      <h5>Instructions: After filling out the drop down selections on the left, hover over each node to see game match
-         details. Nodes with a yellow box are matches between the two teams selected. 
-         Double click on the node to drill down more stats from the match. In drill down horizontal graphs, 
-         double click on bars to see additional stats.</h5>
-    </div>
+      <div class="instructions">
+        <h5>
+          Instructions: After filling out the drop down selections on the left,
+          hover over each node to see game match details. Nodes with a yellow
+          box are matches between the two teams selected. Double click on the
+          node to drill down more stats from the match. In drill down horizontal
+          graphs, double click on bars to see additional stats.
+        </h5>
+      </div>
     </main>
+    <div id="loader" class="loaddiv" style="text-align: center">
+      <h1>Loading...</h1>
+      <img
+        id="gifdiv"
+        src="https://media.giphy.com/media/xTk9ZvMnbIiIew7IpW/giphy.gif"
+      />
+    </div>
     <div class="row" id="overview">
       <div class="col-sm-3">
         <div style="padding-top: 10px; padding-left: 10px">
@@ -268,9 +304,18 @@
       let pyodideReady = 0;
       let yearValue;
       let matchStatsCsv;
+      let tempDisp = undefined;
 
       function getBaseData() {
         //reading the data
+
+        var mainElemen = document.getElementById("overview");
+        if (tempDisp === undefined) {
+          tempDisp = mainElemen.style.display;
+        }
+        mainElemen.style.display = "none";
+
+        //overview
 
         var PromiseWrapper = (xhr, d) =>
           new Promise((resolve) => xhr(d, (p) => resolve(p)));
@@ -316,6 +361,17 @@
           matchesJson = matchesJson_new;
           makeForm();
           loadPythonLibs();
+          function doStuff() {
+            if (pyodideReady === 0) {
+              setTimeout(doStuff, 50); //wait 50 millisecnds then recheck
+              return;
+            } else {
+              var loadElemen = document.getElementById("loader");
+              loadElemen.style.display = "none";
+              mainElemen.style.display = tempDisp;
+            }
+          }
+          doStuff();
         });
       }
 
@@ -623,6 +679,34 @@
           .append("line")
           .attr("stroke", function (d) {
             if (
+              (teamOneValue.toString() === d.source.home_team_name.toString() ||
+                teamOneValue.toString() ===
+                  d.source.away_team_name.toString()) &&
+              (teamTwoValue.toString() === d.source.home_team_name.toString() ||
+                teamTwoValue.toString() === d.source.away_team_name.toString())
+            ) {
+              if (
+                teamOneValue.toString() == d.source.winner.toString() &&
+                (d.target.home_team_name.toString() ===
+                  teamOneValue.toString() ||
+                  d.target.away_team_name.toString() ===
+                    teamOneValue.toString())
+              ) {
+                return "#00008b";
+              } else if (
+                teamTwoValue.toString() == d.source.winner.toString() &&
+                (d.target.home_team_name.toString() ===
+                  teamTwoValue.toString() ||
+                  d.target.away_team_name.toString() ===
+                    teamTwoValue.toString())
+              ) {
+                return "#00008b";
+              } else if (d.source.winner.toString() === "tie") {
+                return "#ccc";
+              } else {
+                return "#ff0000";
+              }
+            } else if (
               d.source.winner.toString() === teamOneValue ||
               d.source.winner.toString() === teamTwoValue
             ) {
@@ -668,7 +752,7 @@
                   d.away_goals
               )
               .style("left", d3.event.pageX - 400 + "px")
-              .style("top", d3.event.pageY + "px");
+              .style("top", d3.event.pageY - 275 + "px");
           })
           .on("mouseout", function (d, i) {
             nodeTip.transition().duration("50").style("opacity", 0);
@@ -1571,8 +1655,7 @@
                         match_id: inner.match_id,
                         outcome: "loss",
                       });
-                    }
-                    else {
+                    } else {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "tie",
@@ -1599,8 +1682,7 @@
                         match_id: inner.match_id,
                         outcome: "loss",
                       });
-                    }
-                    else {
+                    } else {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "tie",
@@ -1627,8 +1709,7 @@
                         match_id: inner.match_id,
                         outcome: "loss",
                       });
-                    }
-                    else {
+                    } else {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "tie",
@@ -1655,8 +1736,7 @@
                         match_id: inner.match_id,
                         outcome: "loss",
                       });
-                    }
-                    else {
+                    } else {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "tie",
@@ -1683,8 +1763,7 @@
                         match_id: inner.match_id,
                         outcome: "loss",
                       });
-                    }
-                    else {
+                    } else {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "tie",
@@ -1707,8 +1786,7 @@
                         match_id: inner.match_id,
                         outcome: "loss",
                       });
-                    }
-                    else {
+                    } else {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "tie",
@@ -1733,8 +1811,7 @@
                         match_id: inner.match_id,
                         outcome: "loss",
                       });
-                    }
-                    else {
+                    } else {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "tie",
@@ -1757,8 +1834,7 @@
                         match_id: inner.match_id,
                         outcome: "loss",
                       });
-                    }
-                    else {
+                    } else {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "tie",
@@ -1789,8 +1865,7 @@
                         match_id: inner.match_id,
                         outcome: "loss",
                       });
-                    }
-                    else {
+                    } else {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "tie",
@@ -1815,8 +1890,7 @@
                         match_id: inner.match_id,
                         outcome: "loss",
                       });
-                    }
-                    else {
+                    } else {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "tie",
@@ -1841,8 +1915,7 @@
                         match_id: inner.match_id,
                         outcome: "loss",
                       });
-                    }
-                    else {
+                    } else {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "tie",
@@ -1867,8 +1940,7 @@
                         match_id: inner.match_id,
                         outcome: "loss",
                       });
-                    }
-                    else {
+                    } else {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "tie",
@@ -1893,8 +1965,7 @@
                         match_id: inner.match_id,
                         outcome: "loss",
                       });
-                    }
-                    else {
+                    } else {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "tie",
@@ -1917,8 +1988,7 @@
                         match_id: inner.match_id,
                         outcome: "loss",
                       });
-                    }
-                    else {
+                    } else {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "tie",
@@ -1943,8 +2013,7 @@
                         match_id: inner.match_id,
                         outcome: "loss",
                       });
-                    }
-                    else {
+                    } else {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "tie",
@@ -1967,8 +2036,7 @@
                         match_id: inner.match_id,
                         outcome: "loss",
                       });
-                    }
-                    else {
+                    } else {
                       tableFormat.push({
                         match_id: inner.match_id,
                         outcome: "tie",
@@ -2031,6 +2099,17 @@
       function loadPythonLibs() {
         languagePluginLoader.then(() => {
           pyodide.loadPackage(["matplotlib", "pandas"]).then(() => {
+            pyodide.runPythonAsync(
+              `
+            import pandas as pd
+            import matplotlib.pyplot as plt
+            import numpy as np
+            from math import pi
+            import io
+            import base64
+            import re
+            import json`
+            );
             pyodideReady = 1;
           });
         });
